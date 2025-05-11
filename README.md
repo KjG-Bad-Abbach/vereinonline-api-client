@@ -1,2 +1,3 @@
-# vereinonline-api-client
-TypeScript reusable API client for VereinOnline
+# VereinOnline-API-Client
+
+TypeScript reusable API client for VereinOnline.
