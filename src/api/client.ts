@@ -2,6 +2,10 @@ import { MembersApi } from "./members.ts";
 import { GroupsApi } from "./groups.ts";
 import { generateToken } from "../utils/auth.ts";
 
+/**
+ * ApiClient class for interacting with the VereinOnline API.
+ * This class handles authentication and provides methods to access different API endpoints.
+ */
 export class ApiClient {
   private token: string | null = null;
   private baseUrl: string;

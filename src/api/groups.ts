@@ -1,5 +1,9 @@
 import type { ApiClient } from "./client.ts";
 
+/**
+ * Represents a group in the VereinOnline API.
+ * The fields are based on the API documentation.
+ */
 export type Group = {
   id: string;
   mandant: string;
@@ -28,6 +32,10 @@ export type Group = {
   pos?: string | null;
 };
 
+/**
+ * GroupsApi class for interacting with the groups endpoint of the VereinOnline API.
+ * This class provides methods to fetch groups.
+ */
 export class GroupsApi {
   private client: ApiClient;
 

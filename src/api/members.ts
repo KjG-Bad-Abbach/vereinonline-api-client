@@ -2,6 +2,10 @@ import type { ApiClient } from "./client.ts";
 
 type KeyedString = `key_${string}`; // custom fields are prefixed with "key_"
 
+/**
+ * Represents a member in the VereinOnline API.
+ * The fields are based on the API documentation.
+ */
 export type Member = {
   id: string;
   name?: string | null;
@@ -118,6 +122,10 @@ export type Member = {
   [key: KeyedString]: string | null | undefined; // custom fields can be added here
 };
 
+/**
+ * MembersApi class for interacting with the members endpoint of the VereinOnline API.
+ * This class provides methods to fetch and update members.
+ */
 export class MembersApi {
   private client: ApiClient;
 
