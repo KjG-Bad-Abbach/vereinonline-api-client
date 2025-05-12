@@ -1,8 +1,8 @@
 {
   "version": "5",
   "specifiers": {
-    "jsr:@std/crypto@*": "1.0.4",
-    "jsr:@std/encoding@*": "1.0.10"
+    "jsr:@std/crypto@1.0.4": "1.0.4",
+    "jsr:@std/encoding@1.0.10": "1.0.10"
   },
   "jsr": {
     "@std/crypto@1.0.4": {
