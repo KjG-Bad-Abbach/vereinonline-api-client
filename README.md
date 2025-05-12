@@ -4,7 +4,8 @@ TypeScript reusable API client for VereinOnline.
 
 ## Features
 
-This API client provides a reusable TypeScript interface for interacting with the VereinOnline API. It includes the following modules:
+This API client provides a reusable TypeScript interface for interacting with
+the VereinOnline API. It includes the following modules:
 
 ### `ApiClient`
 
@@ -32,7 +33,8 @@ This API client provides a reusable TypeScript interface for interacting with th
 
 ### Using Deno
 
-To use this module in your Deno project, import it directly from the module's URL:
+To use this module in your Deno project, import it directly from the module's
+URL:
 
 ```ts
 import { ApiClient } from "jsr:@kjg-bad-abbach/vereinonline-api-client";
@@ -79,21 +81,21 @@ import { ApiClient } from "@kjg-bad-abbach/vereinonline-api-client";
 const client = new ApiClient("https://www.vereinonline.org/IHRVEREIN/");
 
 async function main() {
-    await client.login("username", "password");
+  await client.login("username", "password");
 
-    // Fetch members
-    const members = await client.members.get({ searchTerm: "John" });
-    console.log(members);
+  // Fetch members
+  const members = await client.members.get({ searchTerm: "John" });
+  console.log(members);
 
-    // Fetch groups
-    const groups = await client.groups.get();
-    console.log(groups);
+  // Fetch groups
+  const groups = await client.groups.get();
+  console.log(groups);
 
-    // Update a member
-    const updatedMember = await client.members.update("123", { vorname: "Jane" });
-    console.log(updatedMember);
+  // Update a member
+  const updatedMember = await client.members.update("123", { vorname: "Jane" });
+  console.log(updatedMember);
 
-    client.logout();
+  client.logout();
 }
 
 main().catch(console.error);
