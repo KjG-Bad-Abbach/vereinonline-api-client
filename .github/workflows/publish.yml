@@ -10,7 +10,7 @@ name: Publish
 
 on:
   push:
-    branches: ["main"]
+    tags: ["v*.*.*"]
 
 jobs:
   publish:
@@ -23,6 +23,16 @@ jobs:
     steps:
       - name: Setup repo
         uses: actions/checkout@v4
+
+      - name: Check tag matches version in deno.json
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          FILE_VERSION=$(jq -r .version deno.json)
+          if [ "$TAG_VERSION" != "$FILE_VERSION" ]; then
+            echo "Tag version ($TAG_VERSION) does not match deno.json version ($FILE_VERSION)"
+            exit 1
+          fi
+        shell: bash
 
       - name: Setup Deno
         # uses: denoland/setup-deno@v1
