@@ -84,8 +84,15 @@ export class ApiClient {
         result: "id",
       },
     }) as string[];
-    if (result.length === 0 || !result[0]) {
-      throw new Error("Login failed. Invalid username or password.");
+    const isEmptyArray = Array.isArray(result) &&
+      (result.length === 0 || !result[0]);
+    const isErrorObject = typeof result === "object" && result !== null &&
+      "error" in result;
+    if (isEmptyArray || isErrorObject) {
+      const errorMsg = isErrorObject
+        ? `Login failed: ${(result as { error: string }).error}`
+        : "Login failed. Invalid username or password.";
+      throw new Error(errorMsg);
     }
   }
 
