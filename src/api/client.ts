@@ -21,6 +21,62 @@ export class ApiClient {
   }
 
   /**
+   * Fixes double-encoded JSON strings, particularly those with UTF-8 characters
+   * that have been incorrectly encoded as sequences like "\u00c3\u00bc" instead of "\u00fc".
+   *
+   * This method recursively traverses the input object, detecting string values that may be
+   * double-encoded, and decodes them using the specified charset (default: "UTF-8").
+   * It handles strings, arrays, and objects, returning a new object with corrected encodings.
+   *
+   * @template T The type of the input and output object.
+   * @param obj - The object or string to fix.
+   * @param decoder - Optional TextDecoder instance to use for decoding.
+   * @param charset - The character set to use for decoding (default: "UTF-8"; not used when decoder is provided).
+   * @returns The object or string with corrected encoding.
+   */
+  fixJsonStringDoubleEncoding<T>(
+    obj: T,
+    decoder?: TextDecoder,
+    charset: string = "UTF-8",
+  ): T {
+    if (!decoder) {
+      decoder = new TextDecoder(charset);
+    }
+
+    // VereinOnline sometimes returns JSON strings that are double-encoded,
+    // meaning that characters like "ü" and "ß" are encoded as
+    // "f\u00c3\u00bcr" and "gro\u00c3\u009f" instead of "f\u00fcr" and "gro\u00df".
+    // Wrongly encoded example:
+    // {"text":"f\u00c3\u00bcr --- gro\u00c3\u009f"}
+    // Correctly encoded example:
+    // {"text":"f\u00fcr --- gro\u00df"}
+    // Decoded example:
+    // {"text":"für --- groß"}
+
+    if (typeof obj === "string") {
+      // Re-encode as bytes, then decode using the correct charset
+      const bytes = Uint8Array.from(
+        [...obj].map((char) => char.charCodeAt(0)),
+      );
+      return decoder.decode(bytes) as T;
+    } else if (Array.isArray(obj)) {
+      return obj.map((item) =>
+        this.fixJsonStringDoubleEncoding(item, decoder)
+      ) as T;
+    } else if (obj && typeof obj === "object") {
+      const result: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(obj)) {
+        result[key] = this.fixJsonStringDoubleEncoding(
+          value,
+          decoder,
+        );
+      }
+      return result as T;
+    }
+    return obj;
+  }
+
+  /**
    * Fetches data from the API with authentication.
    * @param endpoint - The API endpoint to fetch data from.
    * @param params - The parameters to include in the request.
@@ -65,46 +121,8 @@ export class ApiClient {
       );
     }
 
-    // Parse the response text as JSON
-    // Recursively decode all strings in the object using the specified charset
-    function fixVereinOnlineJsonStringDoubleEncoding(
-      obj: unknown,
-      decoder: TextDecoder,
-    ): unknown {
-      if (typeof obj === "string") {
-        // Re-encode as bytes, then decode using the correct charset
-        const bytes = Uint8Array.from(
-          [...obj].map((char) => char.charCodeAt(0)),
-        );
-        return decoder.decode(bytes);
-      } else if (Array.isArray(obj)) {
-        return obj.map((item) =>
-          fixVereinOnlineJsonStringDoubleEncoding(item, decoder)
-        );
-      } else if (obj && typeof obj === "object") {
-        const result: Record<string, unknown> = {};
-        for (const [key, value] of Object.entries(obj)) {
-          result[key] = fixVereinOnlineJsonStringDoubleEncoding(value, decoder);
-        }
-        return result;
-      }
-      return obj;
-    }
-
-    const dataWithDoubleEncoding = await response.json();
-    // VereinOnline returns JSON strings that are double-encoded,
-    // meaning that characters like "ü" and "ß" are encoded as
-    // "f\u00c3\u00bcr" and "gro\u00c3\u009f" instead of "f\u00fcr" and "gro\u00df".
-    // Wrongly encoded example:
-    // {"text":"f\u00c3\u00bcr --- gro\u00c3\u009f"}
-    // Correctly encoded example:
-    // {"text":"f\u00fcr --- gro\u00df"}
-    // Decoded example:
-    // {"text":"für --- groß"}
-    const data = fixVereinOnlineJsonStringDoubleEncoding(
-      dataWithDoubleEncoding,
-      new TextDecoder("UTF-8"),
-    );
+    // Parse the response as JSON
+    const data = await response.json();
 
     // If data is not an object, throw
     if (
@@ -119,7 +137,10 @@ export class ApiClient {
       data !== null &&
       "error" in data;
     if (isErrorObject) {
-      const errorMsg = (data as { error: string }).error ||
+      const errorMsg = this.fixJsonStringDoubleEncoding(
+        (data as { error: string }).error,
+        new TextDecoder("UTF-8"),
+      ) ||
         "An error occurred while fetching data.";
       throw new Error(errorMsg);
     }
