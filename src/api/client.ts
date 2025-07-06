@@ -114,6 +114,16 @@ export class ApiClient {
       throw new Error(`Expected an object, but got ${typeof data}`);
     }
 
+    // Check if the response contains an error object
+    const isErrorObject = typeof data === "object" &&
+      data !== null &&
+      "error" in data;
+    if (isErrorObject) {
+      const errorMsg = (data as { error: string }).error ||
+        "An error occurred while fetching data.";
+      throw new Error(errorMsg);
+    }
+
     // Return the parsed data
     return data as T;
   }
@@ -125,23 +135,28 @@ export class ApiClient {
    */
   async login(username: string, password: string): Promise<void> {
     this.token = generateToken(username, password);
-    const result = await this.fetchData("VerifyLogin", {
-      method: "POST",
-      body: {
-        user: username,
-        password: password,
-        result: "id",
-      },
-    }) as string[];
-    const isEmptyArray = Array.isArray(result) &&
-      (result.length === 0 || !result[0]);
-    const isErrorObject = typeof result === "object" && result !== null &&
-      "error" in result;
-    if (isEmptyArray || isErrorObject) {
-      const errorMsg = isErrorObject
-        ? `Login failed: ${(result as { error: string }).error}`
-        : "Login failed. Invalid username or password.";
-      throw new Error(errorMsg);
+    try {
+      const result = await this.fetchData("VerifyLogin", {
+        method: "POST",
+        body: {
+          user: username,
+          password: password,
+          result: "id",
+        },
+      }) as string[];
+      const isEmptyArray = Array.isArray(result) &&
+        (result.length === 0 || !result[0]);
+      if (isEmptyArray) {
+        const errorMsg = "Invalid username or password.";
+        throw new Error(errorMsg);
+      }
+    } catch (error) {
+      this.token = null; // Clear token on error
+      throw new Error(
+        `Login failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
     }
   }
 
