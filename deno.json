@@ -1,6 +1,6 @@
 {
   "name": "@kjg-bad-abbach/vereinonline-api-client",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "exports": "./mod.ts",
   "tasks": {
     "dev": "deno test --watch"
