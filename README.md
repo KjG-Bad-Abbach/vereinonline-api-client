@@ -28,6 +28,13 @@ the VereinOnline API. It includes the following modules:
 - Strongly typed interfaces for `Member` and `Group` objects.
 - Flexible query options for filtering and sorting.
 - Built-in error handling for API responses.
+- Automatic double-encoding fix for JSON strings:
+  - Transparently decodes VereinOnline's double-encoded JSON responses, ensuring
+    special characters (like "ü" and "ß") are correctly represented.
+  - Example: Converts `{"text":"f\u00c3\u00bcr --- gro\u00c3\u009f"}` to
+    `{"text":"für --- groß"}` automatically.
+  - No manual decoding required—API responses are always properly decoded for
+    you.
 
 ## Usage
 

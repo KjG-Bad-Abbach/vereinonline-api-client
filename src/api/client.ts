@@ -56,17 +56,66 @@ export class ApiClient {
       headers,
       body: bodyStr,
     });
+
+    // Check if the response is ok (status in the range 200-299)
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(
         `Error fetching data: ${response.statusText} - ${errorText}`,
       );
     }
-    const data = await response.json();
-    if (typeof data !== "object") {
+
+    // Parse the response text as JSON
+    // Recursively decode all strings in the object using the specified charset
+    function fixVereinOnlineJsonStringDoubleEncoding(
+      obj: unknown,
+      decoder: TextDecoder,
+    ): unknown {
+      if (typeof obj === "string") {
+        // Re-encode as bytes, then decode using the correct charset
+        const bytes = Uint8Array.from(
+          [...obj].map((char) => char.charCodeAt(0)),
+        );
+        return decoder.decode(bytes);
+      } else if (Array.isArray(obj)) {
+        return obj.map((item) =>
+          fixVereinOnlineJsonStringDoubleEncoding(item, decoder)
+        );
+      } else if (obj && typeof obj === "object") {
+        const result: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(obj)) {
+          result[key] = fixVereinOnlineJsonStringDoubleEncoding(value, decoder);
+        }
+        return result;
+      }
+      return obj;
+    }
+
+    const dataWithDoubleEncoding = await response.json();
+    // VereinOnline returns JSON strings that are double-encoded,
+    // meaning that characters like "ü" and "ß" are encoded as
+    // "f\u00c3\u00bcr" and "gro\u00c3\u009f" instead of "f\u00fcr" and "gro\u00df".
+    // Wrongly encoded example:
+    // {"text":"f\u00c3\u00bcr --- gro\u00c3\u009f"}
+    // Correctly encoded example:
+    // {"text":"f\u00fcr --- gro\u00df"}
+    // Decoded example:
+    // {"text":"für --- groß"}
+    const data = fixVereinOnlineJsonStringDoubleEncoding(
+      dataWithDoubleEncoding,
+      new TextDecoder("UTF-8"),
+    );
+
+    // If data is not an object, throw
+    if (
+      typeof data !== "object" || data === null ||
+      data === undefined
+    ) {
       throw new Error(`Expected an object, but got ${typeof data}`);
     }
-    return data;
+
+    // Return the parsed data
+    return data as T;
   }
 
   /**
