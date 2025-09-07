@@ -177,10 +177,10 @@ export class MembersApi {
   ): Promise<(
     & Pick<
       Member & {
-        "rollen": string;
-        "gruppen": string;
-        "beitraege": string;
-        "beitraegewert": string;
+        "rollen": string[];
+        "gruppen": string[];
+        "beitraege": string[];
+        "beitraegewert": string[];
         "beitragsdaten": ContributionData[];
       },
       FIELDS[number]
@@ -196,7 +196,54 @@ export class MembersApi {
       felder: fields ? fields.join(",") : undefined,
       geloescht: includeDeleted ? "a" : undefined,
     };
-    return await this.client.fetchData("GetMembers", { method: "POST", body });
+    const results = await this.client.fetchData("GetMembers", {
+      method: "POST",
+      body,
+    }) as Array<
+      Member & {
+        rollen?: string;
+        gruppen?: string;
+        beitraege?: string;
+        beitraegewert?: string;
+        beitragsdaten?: ContributionData[];
+      }
+    >;
+
+    return results.map((result) => {
+      const base = { ...result };
+
+      // Helper function to transform comma-separated strings to unique arrays
+      const transformField = (value: string | undefined) =>
+        Array.from(new Set(value ? value.split(", ") : []));
+
+      const arrayFields = {
+        rollen: transformField(result.rollen),
+        gruppen: transformField(result.gruppen),
+        beitraege: transformField(result.beitraege),
+        beitraegewert: transformField(result.beitraegewert),
+      } as const;
+
+      // Only include fields that are requested
+      const transformedFields = Object.fromEntries(
+        Object.entries(arrayFields).filter(([key]) =>
+          fields?.includes(key as keyof typeof arrayFields)
+        ),
+      );
+
+      return { ...base, ...transformedFields } as (
+        & Pick<
+          Member & {
+            "rollen": string[];
+            "gruppen": string[];
+            "beitraege": string[];
+            "beitraegewert": string[];
+            "beitragsdaten": ContributionData[];
+          },
+          FIELDS[number]
+        >
+        & { id: string }
+      );
+    });
   }
 
   /**
