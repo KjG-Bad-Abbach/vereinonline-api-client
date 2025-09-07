@@ -2,7 +2,8 @@
   "version": "5",
   "specifiers": {
     "jsr:@std/crypto@1.0.4": "1.0.4",
-    "jsr:@std/encoding@1.0.10": "1.0.10"
+    "jsr:@std/encoding@1.0.10": "1.0.10",
+    "npm:@types/node@*": "24.2.0"
   },
   "jsr": {
     "@std/crypto@1.0.4": {
@@ -10,6 +11,17 @@
     },
     "@std/encoding@1.0.10": {
       "integrity": "8783c6384a2d13abd5e9e87a7ae0520a30e9f56aeeaa3bdf910a3eaaf5c811a1"
+    }
+  },
+  "npm": {
+    "@types/node@24.2.0": {
+      "integrity": "sha512-3xyG3pMCq3oYCNg7/ZP+E1ooTaGB4cG8JWRsqqOYQdbWNY4zbaV0Ennrd7stjiJEFZCaybcIgpTjJWHRfBSIDw==",
+      "dependencies": [
+        "undici-types"
+      ]
+    },
+    "undici-types@7.10.0": {
+      "integrity": "sha512-t5Fy/nfn+14LuOc2KNYg75vZqClpAiqscVvMygNnlsHBFpSXdJaYtXMcdNLpl/Qvc3P2cB3s6lOV51nqsFq4ag=="
     }
   }
 }
