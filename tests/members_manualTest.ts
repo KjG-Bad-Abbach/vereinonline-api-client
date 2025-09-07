@@ -18,8 +18,14 @@ console.log("Login successful.");
 console.log("Testing getMembers...");
 const members = await client.members.get({
   searchTerm: "Max",
-  //   searchParams: { name: "Mustermann" },
-  fields: ["kvp", "name", "p_email", "g_email", "key_custom_field"],
+  // filter: "nachname='Mustermann'",
+  fields: [
+    "kvp",
+    "name",
+    "p_email",
+    "g_email",
+    "key_custom_field",
+  ],
 });
 for (const member of members) {
   console.log(`Member ID: ${member.id}`);
