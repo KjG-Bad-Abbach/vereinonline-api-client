@@ -3,6 +3,21 @@ import type { ApiClient } from "./client.ts";
 type KeyedString = `key_${string}`; // custom fields are prefixed with "key_"
 
 /**
+ * Represents contribution data (beitragsdaten) for a member.
+ */
+export type ContributionData = {
+  anzahl: string;
+  beitragid: string;
+  beitraggruppe: string;
+  datumstart: string;
+  beitragende: string;
+  datumerstellt: string;
+  gruppenid: string;
+  anmerkung: string;
+  kategorie: string;
+};
+
+/**
  * Represents a member in the VereinOnline API.
  * The fields are based on the API documentation.
  */
@@ -166,7 +181,7 @@ export class MembersApi {
         "gruppen": string;
         "beitraege": string;
         "beitraegewert": string;
-        "beitragsdaten": string;
+        "beitragsdaten": ContributionData[];
       },
       FIELDS[number]
     >
@@ -199,10 +214,23 @@ export class MembersApi {
     }
   > {
     const body = { id: memberId };
-    return await this.client.fetchData("GetMember", {
+    const result = await this.client.fetchData("GetMember", {
       method: "POST",
       body,
-    });
+    }) as Member & {
+      rollen?: string;
+      gruppen?: string;
+      gruppenids?: string;
+      code: string;
+      maxmahnstufe: string;
+    };
+
+    return {
+      ...result,
+      rollen: result.rollen ? result.rollen.split(", ") : [],
+      gruppen: result.gruppen ? result.gruppen.split(", ") : [],
+      gruppenids: result.gruppenids ? result.gruppenids.split(", ") : [],
+    };
   }
 
   /**
@@ -213,8 +241,98 @@ export class MembersApi {
    */
   async update(
     memberId: string,
-    updates: Partial<Omit<Member, "id">>,
+    updates: Partial<
+      Omit<Member, "id"> & {
+        addByName: Partial<{
+          rollen: string[];
+          gruppen: string[];
+          beitraege: string[];
+          beitragsgruppen: string[];
+        }>;
+        removeByName: Partial<{
+          rollen: string[];
+          gruppen: string[];
+          beitraege: string[];
+          beitragsgruppen: string[];
+        }>;
+        beitraganzahl: number;
+        beitragstart: string;
+        beitragende: string;
+        einheitKuerzel: string;
+      }
+    >,
   ): Promise<Member> {
+    // Convert add and remove operations to the required format
+    if (updates.addByName || updates.removeByName) {
+      updates = { ...updates };
+
+      const fields = [
+        "rollen",
+        "gruppen",
+        "beitraege",
+        "beitragsgruppen",
+      ] as const;
+
+      for (const field of fields) {
+        if (updates.addByName?.[field] || updates.removeByName?.[field]) {
+          const addItems = updates.addByName?.[field] || [];
+          const removeItems = (updates.removeByName?.[field] || []).map((
+            item,
+          ) => `-${item}`);
+
+          // Check that when adding beitraege or beitragsgruppen, beitraganzahl is also set
+          if (
+            addItems.length > 0 &&
+            !updates.beitraganzahl &&
+            (field === "beitraege" || field === "beitragsgruppen")
+          ) {
+            throw new Error(
+              "When adding beitraege or beitragsgruppen, beitraganzahl must also be set.",
+            );
+          }
+
+          // Special handling: if modifying beitraege or beitragsgruppen and setting
+          // beitragstart or beitragende, remove the added items first.
+          // Otherwise, the API will not update the dates.
+          if (
+            addItems.length > 0 &&
+            (updates.beitragstart || updates.beitragende) &&
+            (field === "beitraege" || field === "beitragsgruppen")
+          ) {
+            removeItems.push(...addItems.map((item) => `-${item}`));
+          }
+
+          (updates as Record<string, unknown>)[field] = [
+            ...removeItems, // first remove items
+            ...addItems, // then add items
+          ].join(",");
+        }
+      }
+
+      delete updates.addByName;
+      delete updates.removeByName;
+    }
+
+    // Check that beitraganzahl, beitragstart, and beitragende are only allowed with beitraege or beitragsgruppen
+    if (
+      (updates.beitraganzahl !== undefined ||
+        updates.beitragstart !== undefined ||
+        updates.beitragende !== undefined) &&
+      !(updates as Record<string, unknown>).beitraege &&
+      !(updates as Record<string, unknown>).beitragsgruppen
+    ) {
+      throw new Error(
+        "beitraganzahl, beitragstart, and beitragende can only be set when beitraege or beitragsgruppen are also set.",
+      );
+    }
+
+    // Convert einheitKuerzel to einheit if provided
+    if (updates.einheitKuerzel) {
+      updates = { ...updates };
+      (updates as Record<string, unknown>).einheit = updates.einheitKuerzel;
+      delete updates.einheitKuerzel;
+    }
+
     const body = { id: memberId, ...updates };
     return await this.client.fetchData("UpdateMember", {
       method: "POST",
