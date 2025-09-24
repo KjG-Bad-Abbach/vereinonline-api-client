@@ -1,5 +1,6 @@
 import { MembersApi } from "./members.ts";
 import { GroupsApi } from "./groups.ts";
+import { TemplatesApi } from "./templates.ts";
 import { generateToken } from "../utils/auth.ts";
 
 /**
@@ -79,6 +80,7 @@ export class ApiClient {
    * @param endpoint - The API endpoint to fetch data from.
    * @param params - The parameters to include in the request.
    * @returns The response data from the API.
+   * @throws Will throw an error if the request fails or if the response is not valid.
    */
   async fetchData<T>(
     endpoint: string,
@@ -105,7 +107,7 @@ export class ApiClient {
         bodyStr = JSON.stringify(body);
       }
     }
-    const response = await fetch(url.toString(), {
+    const response = await fetch(url, {
       method,
       headers,
       body: bodyStr,
@@ -145,6 +147,150 @@ export class ApiClient {
 
     // Return the parsed data
     return data as T;
+  }
+
+  private async fetchWithTokenInRedirect(
+    url: URL,
+    options: RequestInit,
+  ): Promise<Response> {
+    options.redirect = "manual";
+    const response = await fetch(url, options);
+    if (response.status === 302) {
+      const location = response.headers.get("location");
+      // Do the redirect manually with the token
+      if (location) {
+        const redirectUrl = new URL(location, this.baseUrl);
+        if (this.token) {
+          redirectUrl.searchParams.set("token", this.token);
+        }
+        return this.fetchWithTokenInRedirect(redirectUrl, {
+          ...options,
+          method: "GET",
+          body: null,
+        });
+      }
+    }
+    return response;
+  }
+
+  /**
+   * Fetches data from the API with authentication.
+   * @param endpoint - The API endpoint to fetch data from.
+   * @param params - The parameters to include in the request.
+   * @returns The response data from the API.
+   * @throws Will throw an error if the request fails or if the response is not valid.
+   */
+  async fetchHtml(
+    path: string,
+    { method = "GET", params, body, contentType }: {
+      method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+      params?: Record<string, string> | null;
+      body?: string | Record<string, unknown> | unknown[] | FormData | null;
+      contentType?:
+        | "application/x-www-form-urlencoded"
+        | "multipart/form-data"
+        | "text/plain"
+        | "application/json";
+    },
+  ): Promise<string> {
+    const url = new URL(path, this.baseUrl);
+    if (this.token) {
+      url.searchParams.set("token", this.token);
+    }
+    if (params) {
+      for (const [key, value] of Object.entries(params)) {
+        url.searchParams.set(key, value);
+      }
+    }
+    const headers = new Headers({
+      "Accept":
+        "text/html, application/xhtml+xml, application/xml;q=0.9, */*;q=0.8",
+    });
+    let bodyData: string | FormData | null = null;
+    if (body !== null && body !== undefined) {
+      if (typeof body === "string") {
+        headers.set("Content-Type", "text/plain");
+        bodyData = body;
+      } else if (body instanceof FormData) {
+        // Let the browser set the correct Content-Type with boundary
+        bodyData = body;
+      } else if (typeof body === "object" || Array.isArray(body)) {
+        if (contentType === "application/x-www-form-urlencoded") {
+          // Prepare form data as application/x-www-form-urlencoded
+          const urlSearchParams = new URLSearchParams();
+          for (const [key, value] of Object.entries(body)) {
+            urlSearchParams.append(key, String(value));
+          }
+          headers.set("Content-Type", "application/x-www-form-urlencoded");
+          bodyData = urlSearchParams.toString();
+        } else if (contentType === "multipart/form-data") {
+          // Prepare form data as multipart/form-data
+          const formData = new FormData();
+          for (const [key, value] of Object.entries(body)) {
+            formData.append(key, String(value));
+          }
+          bodyData = formData;
+          // Let the browser set the correct Content-Type with boundary
+        } else {
+          // Default to application/json
+          const json = JSON.stringify(body);
+          headers.set("Content-Type", "application/json");
+          bodyData = json;
+        }
+      }
+    }
+    const response = await this.fetchWithTokenInRedirect(url, {
+      method,
+      headers,
+      body: bodyData,
+    });
+
+    // Check if the response is ok (status in the range 200-299)
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Error fetching html: ${response.statusText} - ${errorText}`,
+      );
+    }
+
+    // Parse the response as JSON
+    const bytes = await response.bytes();
+    if (!bytes) {
+      throw new Error("No data received from the server.");
+    }
+    // Extract charset from Content-Type header, fallback to windows-1252
+    const responseContentType = response.headers.get("content-type") || "";
+    const responseCharsetMatch = responseContentType.match(/charset=([^;]+)/i);
+    const responseCharset = responseCharsetMatch
+      ? responseCharsetMatch[1].trim()
+      : "windows-1252";
+
+    // Decode bytes using the detected charset
+    const text = new TextDecoder(responseCharset).decode(bytes);
+
+    // Check if the response contains an error object
+    const isErrorObject = typeof text === "object" &&
+      text !== null &&
+      "error" in text;
+    if (isErrorObject) {
+      const errorMsg = this.fixJsonStringDoubleEncoding(
+        (text as { error: string }).error,
+        new TextDecoder("UTF-8"),
+      ) ||
+        "An error occurred while fetching data.";
+      throw new Error(errorMsg);
+    }
+
+    // If data is not a string, throw
+    if (
+      typeof text !== "string" || text === null ||
+      text === undefined
+    ) {
+      throw new Error(`Expected a string, but got ${typeof text}`);
+    }
+
+    // Return the parsed data
+    return text;
   }
 
   /**
@@ -206,5 +352,10 @@ export class ApiClient {
   private groupsApi?: GroupsApi;
   get groups(): GroupsApi {
     return this.groupsApi ??= new GroupsApi(this);
+  }
+
+  private templatesApi?: TemplatesApi;
+  get templates(): TemplatesApi {
+    return this.templatesApi ??= new TemplatesApi(this);
   }
 }
