@@ -9,8 +9,6 @@ import { generateToken } from "../utils/auth.ts";
 export class ApiClient {
   private token: string | null = null;
   private baseUrl: string;
-  private membersApi: MembersApi = new MembersApi(this);
-  private groupsApi: GroupsApi = new GroupsApi(this);
 
   /**
    * Constructor for the ApiClient class.
@@ -200,17 +198,13 @@ export class ApiClient {
     this.token = null;
   }
 
-  /**
-   * Creates an instance of the Members API.
-   */
+  private membersApi?: MembersApi;
   get members(): MembersApi {
-    return this.membersApi;
+    return this.membersApi ??= new MembersApi(this);
   }
 
-  /**
-   * Creates an instance of the Groups API.
-   */
+  private groupsApi?: GroupsApi;
   get groups(): GroupsApi {
-    return this.groupsApi;
+    return this.groupsApi ??= new GroupsApi(this);
   }
 }
