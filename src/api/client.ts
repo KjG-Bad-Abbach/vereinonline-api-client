@@ -153,9 +153,21 @@ export class ApiClient {
    * Logs in the user and stores the token.
    * @param username - The username for authentication.
    * @param password - The password for authentication.
+   * @param shouldVerifyLogin - Whether to verify the login by making a test request (default: true).
+   * @throws Will throw an error if the login fails.
    */
-  async login(username: string, password: string): Promise<void> {
+  async login(
+    username: string,
+    password: string,
+    shouldVerifyLogin: boolean = true,
+  ): Promise<void> {
     this.token = generateToken(username, password);
+
+    if (!shouldVerifyLogin) {
+      return;
+    }
+
+    // Verify login by making a test request
     try {
       const result = await this.fetchData("VerifyLogin", {
         method: "POST",
