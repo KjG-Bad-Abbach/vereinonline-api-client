@@ -26,6 +26,7 @@ export class LayoutMailTemplatesApi
     super(client, mapping, {
       hasSubject: false,
       hasHtmlBody: true,
+      resetToDefault: { htmlBody: "" },
     });
   }
 }
