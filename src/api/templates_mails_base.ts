@@ -16,6 +16,7 @@ export type MailTemplate = {
  * A mail template with its name.
  */
 export type NamedMailTemplate = MailTemplate & {
+  index?: number;
   name: string;
 };
 
@@ -29,7 +30,7 @@ export class MailTemplateClientApi {
 
   private extractNamesFromHtml(
     html: string,
-  ): { name: string; href: string; isActive: boolean }[] {
+  ): { name: string; href: string; isActive: boolean; index: number }[] {
     const doc = new DOMParser().parseFromString(html, "text/html");
 
     // Extract the names from the links
@@ -64,10 +65,12 @@ export class MailTemplateClientApi {
       );
     }
 
+    let index = 0;
     const links = [...navListElement.querySelectorAll("li a")].map((a) => ({
       name: a.textContent?.trim() || "",
       href: a.getAttribute("href") || "",
       isActive: a.closest("li")?.classList.contains("active") || false,
+      index: index++,
     }));
     return links;
   }
@@ -76,8 +79,8 @@ export class MailTemplateClientApi {
     const doc = new DOMParser().parseFromString(html, "text/html");
 
     // Extract the name from the active link
-    const name = this.extractNamesFromHtml(html).find((l) => l.isActive)?.name;
-    if (!name) {
+    const activeLink = this.extractNamesFromHtml(html).find((l) => l.isActive);
+    if (!activeLink) {
       throw new Error(
         "Failed to parse the template HTML. (No active link found)",
       );
@@ -110,7 +113,8 @@ export class MailTemplateClientApi {
     }
 
     return {
-      name: name,
+      index: activeLink.index,
+      name: activeLink.name,
       subject: subject,
       htmlBody: htmlBody,
     };
@@ -128,6 +132,7 @@ export class MailTemplateClientApi {
     );
 
     return this.extractNamesFromHtml(html).map((n) => ({
+      index: n.index,
       name: n.name,
       href: n.href,
     }));
