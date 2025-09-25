@@ -245,10 +245,12 @@ export class MailTemplateBaseApi<
       );
     }
 
-    // Fetch all templates
-    for (const template of this.allTemplateNames()) {
-      templates[template] = await this.get(template);
-    }
+    // Fetch all templates in parallel
+    await Promise.all(
+      this.allTemplateNames().map(async (template) => {
+        templates[template] = await this.get(template);
+      }),
+    );
 
     return templates as Record<TEMPLATE, MailTemplate>;
   }
