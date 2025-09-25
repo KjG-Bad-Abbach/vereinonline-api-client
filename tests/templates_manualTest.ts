@@ -77,10 +77,66 @@ console.log("All member templates:");
 console.log(allMemberTemplates);
 
 console.log("-----------------------------");
+console.log("Testing getAll event templates...");
+const allEventTemplates = await client.templates.mails.events.getAll();
+console.log("All event templates:");
+console.log(allEventTemplates);
+
+console.log("-----------------------------");
+console.log("Testing getAll vote templates...");
+const allVoteTemplates = await client.templates.mails.votes.getAll();
+console.log("All vote templates:");
+console.log(allVoteTemplates);
+
+console.log("-----------------------------");
+console.log("Testing getAll convention templates...");
+const allConventionTemplates = await client.templates.mails.conventions
+  .getAll();
+console.log("All convention templates:");
+console.log(allConventionTemplates);
+
+console.log("-----------------------------");
+console.log("Testing getAll shop templates...");
+const allShopTemplates = await client.templates.mails.shop.getAll();
+console.log("All shop templates:");
+console.log(allShopTemplates);
+
+console.log("-----------------------------");
+console.log("Testing getAll accounting templates...");
+const allAccountingTemplates = await client.templates.mails.accounting.getAll();
+console.log("All accounting templates:");
+console.log(allAccountingTemplates);
+
+console.log("-----------------------------");
+console.log("Testing getAll reservation templates...");
+const allReservationTemplates = await client.templates.mails.reservations
+  .getAll();
+console.log("All reservation templates:");
+console.log(allReservationTemplates);
+
+console.log("-----------------------------");
 console.log("Testing getAll forum templates...");
 const allForumTemplates = await client.templates.mails.forum.getAll();
 console.log("All forum templates:");
 console.log(allForumTemplates);
+
+console.log("-----------------------------");
+console.log("Testing getAll task templates...");
+const allTaskTemplates = await client.templates.mails.tasks.getAll();
+console.log("All task templates:");
+console.log(allTaskTemplates);
+
+console.log("-----------------------------");
+console.log("Testing getAll file templates...");
+const allFileTemplates = await client.templates.mails.files.getAll();
+console.log("All file templates:");
+console.log(allFileTemplates);
+
+console.log("-----------------------------");
+console.log("Testing getAll blog templates...");
+const allBlogTemplates = await client.templates.mails.blog.getAll();
+console.log("All blog templates:");
+console.log(allBlogTemplates);
 
 console.log("-----------------------------");
 console.log("Testing getAll doubleOptIn templates...");
