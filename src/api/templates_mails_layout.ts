@@ -23,6 +23,9 @@ const mapping = {
 export class LayoutMailTemplatesApi
   extends MailTemplateBaseApi<keyof typeof mapping> {
   constructor(client: ApiClient) {
-    super(client, mapping);
+    super(client, mapping, {
+      hasSubject: false,
+      hasHtmlBody: true,
+    });
   }
 }

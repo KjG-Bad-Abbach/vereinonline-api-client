@@ -8,8 +8,8 @@ await initParser();
  * Represents a mail template in VereinOnline.
  */
 export type MailTemplate = {
-  subject: string;
-  htmlBody: string;
+  subject?: string;
+  htmlBody?: string;
 };
 
 export class MailTemplateClientApi {
@@ -17,6 +17,7 @@ export class MailTemplateClientApi {
     private client: ApiClient,
     private action: string,
     private cmd: string,
+    private options?: { hasSubject?: boolean; hasHtmlBody?: boolean },
   ) {}
 
   private extractNamesFromHtml(
@@ -66,26 +67,31 @@ export class MailTemplateClientApi {
   private extractTemplateFromHtml(html: string): MailTemplate {
     const doc = new DOMParser().parseFromString(html, "text/html");
 
-    // Extract the subject from the input field
-    const subjectElement = doc?.querySelector(
-      '#form1 input[name="subject"]',
-    );
-    if (!subjectElement) {
-      throw new Error(
-        "Failed to parse the template HTML. (No subject element found)",
+    let subject: string | undefined = undefined;
+    if (this.options?.hasSubject !== false) {
+      // Extract the subject from the input field
+      const subjectElement = doc?.querySelector(
+        '#form1 input[name="subject"]',
       );
+      if (!subjectElement) {
+        throw new Error(
+          "Failed to parse the template HTML. (No subject element found)",
+        );
+      }
+      subject = subjectElement?.attributes.getNamedItem("value")?.value || "";
     }
-    const subject = subjectElement?.attributes.getNamedItem("value")?.value ||
-      "";
 
-    // Extract the body from the textarea
-    const bodyElement = doc?.querySelector('#form1 textarea[name="werte"]');
-    if (!bodyElement) {
-      throw new Error(
-        "Failed to parse the template HTML. (No body element found)",
-      );
+    let htmlBody: string | undefined = undefined;
+    if (this.options?.hasHtmlBody !== false) {
+      // Extract the body from the textarea
+      const bodyElement = doc?.querySelector('#form1 textarea[name="werte"]');
+      if (!bodyElement) {
+        throw new Error(
+          "Failed to parse the template HTML. (No body element found)",
+        );
+      }
+      htmlBody = bodyElement?.textContent || "";
     }
-    const htmlBody = bodyElement?.textContent || "";
 
     return {
       subject: subject,
@@ -180,6 +186,8 @@ export class MailTemplateBaseApi<
     protected client: ApiClient,
     private mapping: Record<TEMPLATE, { action: string; cmd: string }>,
     private options?: {
+      hasSubject?: boolean;
+      hasHtmlBody?: boolean;
       fetchAllTemplateNames?: {
         ignoreHrefs?: string[];
       };
@@ -231,6 +239,7 @@ export class MailTemplateBaseApi<
         this.client,
         info.action,
         info.cmd,
+        this.options,
       );
     }
     return this.cache[template]!;

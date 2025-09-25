@@ -90,4 +90,10 @@ console.log("All doubleOptIn templates:");
 console.log(allDoubleOptInTemplates);
 
 console.log("-----------------------------");
+console.log("Testing getAll layout templates...");
+const allLayoutTemplates = await client.templates.mails.layout.getAll();
+console.log("All layout templates:");
+console.log(allLayoutTemplates);
+
+console.log("-----------------------------");
 console.log("Templates fetched successfully.");
