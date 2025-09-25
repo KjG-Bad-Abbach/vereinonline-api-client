@@ -3,7 +3,10 @@
   "version": "0.2.3",
   "exports": "./mod.ts",
   "tasks": {
-    "dev": "deno test --watch"
+    "dev": "deno test --watch",
+    "test-members": "deno run --allow-env --allow-net --env=.env tests/members_manualTest.ts",
+    "test-groups": "deno run --allow-env --allow-net --env=.env tests/groups_manualTest.ts",
+    "test-templates": "deno run --allow-env --allow-net --allow-read --allow-write --env=.env tests/templates_manualTest.ts"
   },
   "license": "MIT",
   "imports": {
