@@ -25,26 +25,34 @@ export class MailTemplateClientApi {
     const doc = new DOMParser().parseFromString(html, "text/html");
 
     // Extract the names from the links
-    const navElements = doc?.querySelectorAll(
-      `#content ul li a[href*="action=${this.action}&cmd=${this.cmd}"]`,
+    const registerLineElement = doc?.querySelector(
+      "#content > div > div.registerline",
     );
-
-    if (!navElements || navElements.length === 0) {
+    if (!registerLineElement) {
       throw new Error(
-        "Failed to parse the template HTML. (No nav elements found)",
+        "Failed to parse the template HTML. (No registerline element found)",
       );
     }
 
-    if (navElements.length > 1) {
+    // Find the next sibling ul element after the registerline
+    let ulElement = registerLineElement.nextElementSibling;
+    while (ulElement && ulElement.tagName !== "UL") {
+      ulElement = ulElement.nextElementSibling;
+    }
+
+    if (!ulElement) {
       throw new Error(
-        "Failed to parse the template HTML. (Multiple nav lists found)",
+        "Failed to parse the template HTML. (No ul element found after registerline)",
       );
     }
 
-    const navListElement = navElements[0]?.closest("ul");
+    const navListElement = ulElement.querySelector(
+      `a[href*="action=${this.action}&cmd=${this.cmd}"]`,
+    )?.closest("ul");
+
     if (!navListElement) {
       throw new Error(
-        "Failed to parse the template HTML. (No nav list element found)",
+        "Failed to parse the template HTML. (No matching nav list found)",
       );
     }
 
@@ -173,8 +181,6 @@ export class MailTemplateBaseApi<
     private mapping: Record<TEMPLATE, { action: string; cmd: string }>,
     private options?: {
       fetchAllTemplateNames?: {
-        action?: string;
-        cmd?: string;
         ignoreHrefs?: string[];
       };
     },
@@ -189,8 +195,9 @@ export class MailTemplateBaseApi<
   > {
     const errors: Error[] = [];
 
-    const tryGetNames = async (api: MailTemplateClientApi) => {
+    for (const template of this.allTemplateNames()) {
       try {
+        const api = this.getTemplateClient(template);
         let names = await api.getNames();
 
         // Filter out ignored hrefs
@@ -207,34 +214,6 @@ export class MailTemplateBaseApi<
         return names;
       } catch (error) {
         errors.push(error instanceof Error ? error : new Error(String(error)));
-      }
-      return null;
-    };
-
-    if (
-      this.options?.fetchAllTemplateNames?.action ||
-      this.options?.fetchAllTemplateNames?.cmd
-    ) {
-      const { action, cmd } = this.options.fetchAllTemplateNames;
-      if (!action || !cmd) {
-        throw new Error("Both action and cmd must be provided together.");
-      }
-      const api = new MailTemplateClientApi(
-        this.client,
-        action,
-        cmd,
-      );
-      const names = await tryGetNames(api);
-      if (names !== null) {
-        return names;
-      }
-    } else {
-      for (const template of this.allTemplateNames().reverse()) {
-        const api = this.getTemplateClient(template);
-        const names = await tryGetNames(api);
-        if (names !== null) {
-          return names;
-        }
       }
     }
 

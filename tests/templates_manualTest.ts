@@ -83,4 +83,11 @@ console.log("All forum templates:");
 console.log(allForumTemplates);
 
 console.log("-----------------------------");
+console.log("Testing getAll doubleOptIn templates...");
+const allDoubleOptInTemplates = await client.templates.mails.doubleOptIn
+  .getAll();
+console.log("All doubleOptIn templates:");
+console.log(allDoubleOptInTemplates);
+
+console.log("-----------------------------");
 console.log("Templates fetched successfully.");

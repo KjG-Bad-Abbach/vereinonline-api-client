@@ -17,8 +17,6 @@ export class FileMailTemplatesApi
   constructor(client: ApiClient) {
     super(client, mapping, {
       fetchAllTemplateNames: {
-        action: "admin_mailtemplates",
-        cmd: "blognotify.txt",
         ignoreHrefs: [
           "?action=admin_mailtemplates&cmd=forumnotify.txt",
           "?action=admin_mailtemplates&cmd=tasknotification.txt",
