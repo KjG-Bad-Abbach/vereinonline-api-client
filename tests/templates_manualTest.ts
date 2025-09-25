@@ -35,7 +35,7 @@ if (!readonlyTest) {
     );
   }
   console.log("Template fetched:");
-  console.log(JSON.stringify(template, null, 2));
+  console.log(template);
   console.log("-----------------------------");
   console.log("Testing reset to default...");
   await client.templates.mails.members.resetToDefault(testTemplateName);
@@ -47,9 +47,8 @@ if (!readonlyTest) {
       testTemplateName + ".json",
     ),
   );
-  console.log(
-    `Template from file: ${JSON.stringify(templateFromFile, null, 2)}`,
-  );
+  console.log("Template from file:");
+  console.log(templateFromFile);
   if (
     template.subject !== templateFromFile.subject ||
     template.htmlBody !== templateFromFile.htmlBody
@@ -68,7 +67,7 @@ console.log("-----------------------------");
 console.log("Testing getAll templates...");
 const allTemplates = await client.templates.mails.members.getAll();
 console.log("All templates:");
-console.log(JSON.stringify(allTemplates, null, 2));
+console.log(allTemplates);
 console.log("-----------------------------");
 
 console.log("Templates fetched successfully.");
