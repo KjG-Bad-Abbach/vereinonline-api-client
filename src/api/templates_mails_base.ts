@@ -238,10 +238,14 @@ export class MailTemplateBaseApi<
     const additional = existingUrls.filter((url) => !definedUrls.includes(url));
     const missing = definedUrls.filter((url) => !existingUrls.includes(url));
     if (additional.length > 0 || missing.length > 0) {
+      const additionalMsg = additional.length > 0
+        ? ` Additional: ${additional.join(", ")}.`
+        : "";
+      const missingMsg = missing.length > 0
+        ? ` Missing: ${missing.join(", ")}.`
+        : "";
       throw new Error(
-        `Template mapping is out of date. Additional: ${
-          additional.join(", ")
-        }. Missing: ${missing.join(", ")}.`,
+        `Template mapping is out of date.${additionalMsg}${missingMsg}`,
       );
     }
 
