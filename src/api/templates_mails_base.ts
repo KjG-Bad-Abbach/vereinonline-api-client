@@ -19,7 +19,43 @@ export class MailTemplateClientApi {
     private cmd: string,
   ) {}
 
-  private extractFromHtml(html: string): MailTemplate {
+  private extractNamesFromHtml(
+    html: string,
+  ): { title: string; href: string }[] {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+
+    // Extract the names from the links
+    const navElements = doc?.querySelectorAll(
+      `#content ul li a[href*="action=${this.action}&cmd=${this.cmd}"]`,
+    );
+
+    if (!navElements || navElements.length === 0) {
+      throw new Error(
+        "Failed to parse the template HTML. (No nav elements found)",
+      );
+    }
+
+    if (navElements.length > 1) {
+      throw new Error(
+        "Failed to parse the template HTML. (Multiple nav lists found)",
+      );
+    }
+
+    const navListElement = navElements[0]?.closest("ul");
+    if (!navListElement) {
+      throw new Error(
+        "Failed to parse the template HTML. (No nav list element found)",
+      );
+    }
+
+    const links = [...navListElement.querySelectorAll("li a")].map((a) => ({
+      title: a.textContent?.trim() || "",
+      href: a.getAttribute("href") || "",
+    }));
+    return links;
+  }
+
+  private extractTemplateFromHtml(html: string): MailTemplate {
     const doc = new DOMParser().parseFromString(html, "text/html");
 
     // Extract the subject from the input field
@@ -49,6 +85,20 @@ export class MailTemplateClientApi {
     };
   }
 
+  async getNames(): Promise<{ title: string; href: string }[]> {
+    const html = await this.client.fetchHtml(
+      "",
+      {
+        params: {
+          action: this.action,
+          cmd: this.cmd,
+        },
+      },
+    );
+
+    return this.extractNamesFromHtml(html);
+  }
+
   async get(): Promise<MailTemplate> {
     const html = await this.client.fetchHtml(
       "",
@@ -60,7 +110,7 @@ export class MailTemplateClientApi {
       },
     );
 
-    return this.extractFromHtml(html);
+    return this.extractTemplateFromHtml(html);
   }
 
   async resetToDefault(): Promise<MailTemplate> {
@@ -75,7 +125,7 @@ export class MailTemplateClientApi {
     );
 
     try {
-      const template = this.extractFromHtml(html);
+      const template = this.extractTemplateFromHtml(html);
       if (template.subject || template.htmlBody) {
         return template;
       }
@@ -105,7 +155,7 @@ export class MailTemplateClientApi {
       },
     );
 
-    const updatedTemplate = this.extractFromHtml(html);
+    const updatedTemplate = this.extractTemplateFromHtml(html);
     if (
       updatedTemplate.subject !== template.subject ||
       updatedTemplate.htmlBody !== template.htmlBody
@@ -125,6 +175,26 @@ export class MailTemplateBaseApi<
 
   public allTemplateNames(): TEMPLATE[] {
     return Object.keys(this.mapping) as TEMPLATE[];
+  }
+
+  public async fetchAllTemplateNames(): Promise<
+    { title: string; href: string }[]
+  > {
+    const errors: Error[] = [];
+
+    for (const template of this.allTemplateNames().reverse()) {
+      try {
+        const api = this.getTemplateClient(template);
+        return await api.getNames();
+      } catch (error) {
+        errors.push(error instanceof Error ? error : new Error(String(error)));
+      }
+    }
+
+    throw new AggregateError(
+      errors,
+      "Failed to fetch template names from any template.",
+    );
   }
 
   private cache: Partial<Record<TEMPLATE, MailTemplateClientApi>> = {};
@@ -158,6 +228,24 @@ export class MailTemplateBaseApi<
   public async getAll(): Promise<Record<TEMPLATE, MailTemplate>> {
     const templates: Partial<Record<TEMPLATE, MailTemplate>> = {};
 
+    // Check that the mapping is up to date
+    const existingUrls = (await this.fetchAllTemplateNames()).map((t) =>
+      t.href
+    );
+    const definedUrls = this.allTemplateNames().map((t) =>
+      `?action=${this.mapping[t].action}&cmd=${this.mapping[t].cmd}`
+    );
+    const additional = existingUrls.filter((url) => !definedUrls.includes(url));
+    const missing = definedUrls.filter((url) => !existingUrls.includes(url));
+    if (additional.length > 0 || missing.length > 0) {
+      throw new Error(
+        `Template mapping is out of date. Additional: ${
+          additional.join(", ")
+        }. Missing: ${missing.join(", ")}.`,
+      );
+    }
+
+    // Fetch all templates
     for (const template of this.allTemplateNames()) {
       templates[template] = await this.get(template);
     }

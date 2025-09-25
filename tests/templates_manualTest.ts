@@ -20,7 +20,13 @@ await client.login(
 );
 console.log("Login successful.");
 
+console.log("-----------------------------");
+console.log("Available template names:");
+const names = await client.templates.mails.members.fetchAllTemplateNames();
+console.log(names);
+
 if (!readonlyTest) {
+  console.log("-----------------------------");
   console.log("Testing get template...");
   const template = await client.templates.mails.members.get(
     testTemplateName,
@@ -36,10 +42,12 @@ if (!readonlyTest) {
   }
   console.log("Template fetched:");
   console.log(template);
+
   console.log("-----------------------------");
   console.log("Testing reset to default...");
   await client.templates.mails.members.resetToDefault(testTemplateName);
   console.log("Template reset to default.");
+
   console.log("-----------------------------");
   console.log("Testing set template...");
   const templateFromFile = JSON.parse(
@@ -59,7 +67,6 @@ if (!readonlyTest) {
       templateFromFile,
     );
     console.log("Template updated from file.");
-    console.log("-----------------------------");
   }
 }
 
@@ -68,6 +75,6 @@ console.log("Testing getAll templates...");
 const allTemplates = await client.templates.mails.members.getAll();
 console.log("All templates:");
 console.log(allTemplates);
-console.log("-----------------------------");
 
+console.log("-----------------------------");
 console.log("Templates fetched successfully.");
