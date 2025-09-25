@@ -12,6 +12,13 @@ export type MailTemplate = {
   htmlBody?: string;
 };
 
+/**
+ * A mail template with its name.
+ */
+export type NamedMailTemplate = MailTemplate & {
+  name: string;
+};
+
 export class MailTemplateClientApi {
   constructor(
     private client: ApiClient,
@@ -22,7 +29,7 @@ export class MailTemplateClientApi {
 
   private extractNamesFromHtml(
     html: string,
-  ): { title: string; href: string }[] {
+  ): { name: string; href: string; isActive: boolean }[] {
     const doc = new DOMParser().parseFromString(html, "text/html");
 
     // Extract the names from the links
@@ -58,14 +65,23 @@ export class MailTemplateClientApi {
     }
 
     const links = [...navListElement.querySelectorAll("li a")].map((a) => ({
-      title: a.textContent?.trim() || "",
+      name: a.textContent?.trim() || "",
       href: a.getAttribute("href") || "",
+      isActive: a.closest("li")?.classList.contains("active") || false,
     }));
     return links;
   }
 
-  private extractTemplateFromHtml(html: string): MailTemplate {
+  private extractTemplateFromHtml(html: string): NamedMailTemplate {
     const doc = new DOMParser().parseFromString(html, "text/html");
+
+    // Extract the name from the active link
+    const name = this.extractNamesFromHtml(html).find((l) => l.isActive)?.name;
+    if (!name) {
+      throw new Error(
+        "Failed to parse the template HTML. (No active link found)",
+      );
+    }
 
     let subject: string | undefined = undefined;
     if (this.options?.hasSubject !== false) {
@@ -94,12 +110,13 @@ export class MailTemplateClientApi {
     }
 
     return {
+      name: name,
       subject: subject,
       htmlBody: htmlBody,
     };
   }
 
-  async getNames(): Promise<{ title: string; href: string }[]> {
+  async getNames(): Promise<{ name: string; href: string }[]> {
     const html = await this.client.fetchHtml(
       "",
       {
@@ -110,10 +127,13 @@ export class MailTemplateClientApi {
       },
     );
 
-    return this.extractNamesFromHtml(html);
+    return this.extractNamesFromHtml(html).map((n) => ({
+      name: n.name,
+      href: n.href,
+    }));
   }
 
-  async get(): Promise<MailTemplate> {
+  async get(): Promise<NamedMailTemplate> {
     const html = await this.client.fetchHtml(
       "",
       {
@@ -127,7 +147,7 @@ export class MailTemplateClientApi {
     return this.extractTemplateFromHtml(html);
   }
 
-  async resetToDefault(): Promise<MailTemplate> {
+  async resetToDefault(): Promise<NamedMailTemplate> {
     const html = await this.client.fetchHtml(
       "",
       {
@@ -149,7 +169,7 @@ export class MailTemplateClientApi {
     throw new Error("Failed to reset template to default.");
   }
 
-  async set(template: MailTemplate): Promise<void> {
+  async set(template: MailTemplate): Promise<NamedMailTemplate> {
     const body = {
       cmd: `save${this.cmd}`,
       action: this.action,
@@ -176,6 +196,8 @@ export class MailTemplateClientApi {
     ) {
       throw new Error("Failed to update the template.");
     }
+
+    return updatedTemplate;
   }
 }
 
@@ -199,7 +221,7 @@ export class MailTemplateBaseApi<
   }
 
   public async fetchAllTemplateNames(): Promise<
-    { title: string; href: string }[]
+    { name: string; href: string }[]
   > {
     const errors: Error[] = [];
 
@@ -245,23 +267,26 @@ export class MailTemplateBaseApi<
     return this.cache[template]!;
   }
 
-  public get(template: TEMPLATE): Promise<MailTemplate> {
+  public get(template: TEMPLATE): Promise<NamedMailTemplate> {
     const api = this.getTemplateClient(template);
     return api.get();
   }
 
-  public resetToDefault(template: TEMPLATE): Promise<MailTemplate> {
+  public resetToDefault(template: TEMPLATE): Promise<NamedMailTemplate> {
     const api = this.getTemplateClient(template);
     return api.resetToDefault();
   }
 
-  public set(template: TEMPLATE, data: MailTemplate): Promise<void> {
+  public set(
+    template: TEMPLATE,
+    data: MailTemplate,
+  ): Promise<NamedMailTemplate> {
     const api = this.getTemplateClient(template);
     return api.set(data);
   }
 
-  public async getAll(): Promise<Record<TEMPLATE, MailTemplate>> {
-    const templates: Partial<Record<TEMPLATE, MailTemplate>> = {};
+  public async getAll(): Promise<Record<TEMPLATE, NamedMailTemplate>> {
+    const templates: Partial<Record<TEMPLATE, NamedMailTemplate>> = {};
 
     // Check that the mapping is up to date
     const existingUrls = (await this.fetchAllTemplateNames()).map((t) =>
@@ -291,6 +316,6 @@ export class MailTemplateBaseApi<
       }),
     );
 
-    return templates as Record<TEMPLATE, MailTemplate>;
+    return templates as Record<TEMPLATE, NamedMailTemplate>;
   }
 }
