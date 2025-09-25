@@ -63,7 +63,7 @@ export class MailTemplateClientApi {
     return this.extractFromHtml(html);
   }
 
-  async resetToDefault(): Promise<void> {
+  async resetToDefault(): Promise<MailTemplate> {
     const html = await this.client.fetchHtml(
       "",
       {
@@ -74,18 +74,15 @@ export class MailTemplateClientApi {
       },
     );
 
-    let failed = false;
     try {
       const template = this.extractFromHtml(html);
-      if (!template.subject && !template.htmlBody) {
-        failed = true;
+      if (template.subject || template.htmlBody) {
+        return template;
       }
     } catch {
-      failed = true;
+      // Ignore parsing errors here
     }
-    if (failed) {
-      throw new Error("Failed to reset template to default.");
-    }
+    throw new Error("Failed to reset template to default.");
   }
 
   async set(template: MailTemplate): Promise<void> {
@@ -148,7 +145,7 @@ export class MailTemplateBaseApi<
     return api.get();
   }
 
-  public resetToDefault(template: TEMPLATE): Promise<void> {
+  public resetToDefault(template: TEMPLATE): Promise<MailTemplate> {
     const api = this.getTemplateClient(template);
     return api.resetToDefault();
   }
