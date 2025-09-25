@@ -1,4 +1,7 @@
 {
   "editor.formatOnSave": true,
-  "files.insertFinalNewline": true
+  "files.insertFinalNewline": true,
+  "[dart]": {
+    "editor.formatOnSave": true
+  }
 }

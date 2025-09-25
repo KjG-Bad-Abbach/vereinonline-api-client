@@ -37,11 +37,7 @@ export type Group = {
  * This class provides methods to fetch groups.
  */
 export class GroupsApi {
-  private client: ApiClient;
-
-  constructor(apiClient: ApiClient) {
-    this.client = apiClient;
-  }
+  constructor(private client: ApiClient) {}
 
   /**
    * Fetches groups from the API.

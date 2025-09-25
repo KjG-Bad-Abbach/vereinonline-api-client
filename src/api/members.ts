@@ -142,11 +142,7 @@ export type Member = {
  * This class provides methods to fetch and update members.
  */
 export class MembersApi {
-  private client: ApiClient;
-
-  constructor(apiClient: ApiClient) {
-    this.client = apiClient;
-  }
+  constructor(private client: ApiClient) {}
 
   /**
    * Fetches members by a search term.
