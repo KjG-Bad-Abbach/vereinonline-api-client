@@ -5,5 +5,9 @@
   "tasks": {
     "dev": "deno test --watch"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "imports": {
+    "@std/crypto": "jsr:@std/crypto@1.0.4",
+    "@std/encoding": "jsr:@std/encoding@1.0.10"
+  }
 }
