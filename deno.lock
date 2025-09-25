@@ -70,7 +70,9 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@b-fuze/deno-dom@~0.1.56"
+      "jsr:@b-fuze/deno-dom@~0.1.56",
+      "jsr:@std/crypto@1.0.4",
+      "jsr:@std/encoding@1.0.10"
     ]
   }
 }

@@ -1,5 +1,5 @@
-import { crypto } from "jsr:@std/crypto@1.0.4";
-import { encodeHex } from "jsr:@std/encoding@1.0.10/hex";
+import { crypto } from "@std/crypto";
+import { encodeHex } from "@std/encoding/hex";
 
 // https://www.vereinonline.org/handbuch#1.6.3
 

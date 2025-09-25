@@ -1,5 +1,5 @@
 import type { ApiClient } from "./client.ts";
-import { DOMParser, initParser } from "jsr:@b-fuze/deno-dom/wasm-noinit";
+import { DOMParser, initParser } from "@b-fuze/deno-dom/wasm-noinit";
 
 // Initialize the parser
 await initParser();
