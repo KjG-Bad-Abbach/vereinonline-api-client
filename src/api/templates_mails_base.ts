@@ -171,6 +171,13 @@ export class MailTemplateBaseApi<
   constructor(
     protected client: ApiClient,
     private mapping: Record<TEMPLATE, { action: string; cmd: string }>,
+    private options?: {
+      fetchAllTemplateNames?: {
+        action?: string;
+        cmd?: string;
+        ignoreHrefs?: string[];
+      };
+    },
   ) {}
 
   public allTemplateNames(): TEMPLATE[] {
@@ -182,12 +189,52 @@ export class MailTemplateBaseApi<
   > {
     const errors: Error[] = [];
 
-    for (const template of this.allTemplateNames().reverse()) {
+    const tryGetNames = async (api: MailTemplateClientApi) => {
       try {
-        const api = this.getTemplateClient(template);
-        return await api.getNames();
+        let names = await api.getNames();
+
+        // Filter out ignored hrefs
+        if (this.options?.fetchAllTemplateNames?.ignoreHrefs) {
+          names = names.filter(
+            (n) =>
+              !this.options?.fetchAllTemplateNames?.ignoreHrefs?.includes(
+                n.href,
+              ),
+          );
+        }
+
+        // If we found any names, return them
+        return names;
       } catch (error) {
         errors.push(error instanceof Error ? error : new Error(String(error)));
+      }
+      return null;
+    };
+
+    if (
+      this.options?.fetchAllTemplateNames?.action ||
+      this.options?.fetchAllTemplateNames?.cmd
+    ) {
+      const { action, cmd } = this.options.fetchAllTemplateNames;
+      if (!action || !cmd) {
+        throw new Error("Both action and cmd must be provided together.");
+      }
+      const api = new MailTemplateClientApi(
+        this.client,
+        action,
+        cmd,
+      );
+      const names = await tryGetNames(api);
+      if (names !== null) {
+        return names;
+      }
+    } else {
+      for (const template of this.allTemplateNames().reverse()) {
+        const api = this.getTemplateClient(template);
+        const names = await tryGetNames(api);
+        if (names !== null) {
+          return names;
+        }
       }
     }
 

@@ -71,10 +71,16 @@ if (!readonlyTest) {
 }
 
 console.log("-----------------------------");
-console.log("Testing getAll templates...");
-const allTemplates = await client.templates.mails.members.getAll();
-console.log("All templates:");
-console.log(allTemplates);
+console.log("Testing getAll member templates...");
+const allMemberTemplates = await client.templates.mails.members.getAll();
+console.log("All member templates:");
+console.log(allMemberTemplates);
+
+console.log("-----------------------------");
+console.log("Testing getAll forum templates...");
+const allForumTemplates = await client.templates.mails.forum.getAll();
+console.log("All forum templates:");
+console.log(allForumTemplates);
 
 console.log("-----------------------------");
 console.log("Templates fetched successfully.");

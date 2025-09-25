@@ -15,6 +15,16 @@ const mapping = {
 export class ForumMailTemplatesApi
   extends MailTemplateBaseApi<keyof typeof mapping> {
   constructor(client: ApiClient) {
-    super(client, mapping);
+    super(client, mapping, {
+      fetchAllTemplateNames: {
+        action: "admin_mailtemplates",
+        cmd: "blognotify.txt",
+        ignoreHrefs: [
+          "?action=admin_mailtemplates&cmd=tasknotification.txt",
+          "?action=admin_mailtemplates&cmd=datanotify.txt",
+          "?action=admin_mailtemplates&cmd=blognotify.txt",
+        ],
+      },
+    });
   }
 }
