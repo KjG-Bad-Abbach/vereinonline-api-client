@@ -71,6 +71,32 @@ if (!readonlyTest) {
   }
 
   console.log("-----------------------------");
+  console.log("Testing special case...");
+  const testTemplate = {
+    subject:
+      "{#vereinsname#}: Bestätigung der {#STATUS#} zu {#TITEL#} am {#DATUM#}",
+    htmlBody: `
+<p>Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.</p>
+`.trim(),
+    // <p>Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.</p>
+  };
+  await client.templates.mails.members.set(testTemplateName, testTemplate);
+  const templateAfterTest = await client.templates.mails.members.get(
+    testTemplateName,
+  );
+  if (
+    templateAfterTest.subject !== testTemplate.subject ||
+    templateAfterTest.htmlBody !== testTemplate.htmlBody
+  ) {
+    console.error("Test template was not set correctly!");
+    console.log("Expected:", testTemplate);
+    console.log("Got:", templateAfterTest);
+    throw new Error("Test template was not set correctly!");
+  } else {
+    console.log("Test template set and fetched successfully.");
+  }
+
+  console.log("-----------------------------");
   console.log("Testing set template...");
   const templateFromFile = JSON.parse(
     await Deno.readTextFile(
