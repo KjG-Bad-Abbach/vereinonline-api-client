@@ -333,20 +333,43 @@ export class MailTemplateBaseApi<
     const templates: Partial<Record<TEMPLATE, NamedMailTemplate>> = {};
 
     // Check that the mapping is up to date
+
+    // Fetch all template names from upstream
+    // and compare with known names
+    // to detect any changes
+    // that require updating the mapping
+    // or ignoring certain URLs
     const upstreamUrls = (await this.fetchAllTemplateNames()).map((t) =>
       t.href
     );
-    const knownUrls = this.allTemplateNames().map((t) =>
-      `?action=${this.mapping[t].action}&cmd=${this.mapping[t].cmd}`
+    const knownUrls = this.allTemplateNames().map((t) => ({
+      name: t,
+      href: `?action=${this.mapping[t].action}&cmd=${this.mapping[t].cmd}`,
+    }));
+
+    // Find any additional or missing URLs
+    const additional = upstreamUrls.filter((url) =>
+      !knownUrls.map((k) => k.href).includes(url)
     );
-    const additional = upstreamUrls.filter((url) => !knownUrls.includes(url));
-    const missing = knownUrls.filter((url) => !upstreamUrls.includes(url));
+    const missing = knownUrls.map((k) => k.href).filter((url) =>
+      !upstreamUrls.includes(url)
+    );
+
+    // Helper to enhance URL with name if known
+    const tryEnhanceWithName = (url: string) => {
+      const known = knownUrls.find((k) => k.href === url);
+      return known ? `${url} (${known.name})` : url;
+    };
+
+    // If there are any differences, throw an error
     if (additional.length > 0 || missing.length > 0) {
       const additionalMsg = additional.length > 0
-        ? ` Upstream has additional: ${additional.join(", ")}.`
+        ? ` Upstream has additional: ${
+          additional.map(tryEnhanceWithName).join(", ")
+        }.`
         : "";
       const missingMsg = missing.length > 0
-        ? ` Upstream is missing: ${missing.join(", ")}.`
+        ? ` Upstream is missing: ${missing.map(tryEnhanceWithName).join(", ")}.`
         : "";
       throw new Error(
         `Template mapping is out of date.${additionalMsg}${missingMsg}`,
