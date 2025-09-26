@@ -25,11 +25,7 @@ export class MailTemplateClientApi {
     private client: ApiClient,
     private action: string,
     private cmd: string,
-    private options?: {
-      hasSubject?: boolean;
-      hasHtmlBody?: boolean;
-      resetToDefault?: Partial<MailTemplate>;
-    },
+    private options?: { hasSubject?: boolean; hasHtmlBody?: boolean },
   ) {}
 
   private extractNamesFromHtml(
@@ -157,33 +153,23 @@ export class MailTemplateClientApi {
   }
 
   async resetToDefault(): Promise<NamedMailTemplate> {
-    if (this.options?.resetToDefault) {
-      const template = await this.set(this.options.resetToDefault);
-      if (
-        template.subject === this.options.resetToDefault.subject &&
-        template.htmlBody === this.options.resetToDefault.htmlBody
-      ) {
+    const html = await this.client.fetchHtml(
+      "",
+      {
+        params: {
+          action: this.action,
+          cmd: `delete${this.cmd}`,
+        },
+      },
+    );
+
+    try {
+      const template = this.extractTemplateFromHtml(html);
+      if (template.subject || template.htmlBody) {
         return template;
       }
-    } else {
-      const html = await this.client.fetchHtml(
-        "",
-        {
-          params: {
-            action: this.action,
-            cmd: `delete${this.cmd}`,
-          },
-        },
-      );
-
-      try {
-        const template = this.extractTemplateFromHtml(html);
-        if (template.subject || template.htmlBody) {
-          return template;
-        }
-      } catch {
-        // Ignore parsing errors here
-      }
+    } catch {
+      // Ignore parsing errors here
     }
     throw new Error("Failed to reset template to default.");
   }
@@ -232,7 +218,6 @@ export class MailTemplateBaseApi<
       fetchAllTemplateNames?: {
         ignoreHrefs?: string[];
       };
-      resetToDefault?: Partial<MailTemplate>;
     },
   ) {}
 
