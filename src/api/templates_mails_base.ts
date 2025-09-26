@@ -165,10 +165,9 @@ export class MailTemplateClientApi {
 
     try {
       return this.extractTemplateFromHtml(html);
-    } catch {
-      // Ignore parsing errors here
+    } catch (error) {
+      throw new Error(`Failed to reset template to default. (${error})`);
     }
-    throw new Error("Failed to reset template to default.");
   }
 
   async set(template: MailTemplate): Promise<NamedMailTemplate> {
@@ -196,7 +195,9 @@ export class MailTemplateClientApi {
       updatedTemplate.subject !== template.subject ||
       updatedTemplate.htmlBody !== template.htmlBody
     ) {
-      throw new Error("Failed to update the template.");
+      throw new Error(
+        "Failed to update the template. (New values do not match)",
+      );
     }
 
     return updatedTemplate;
