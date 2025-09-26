@@ -40,6 +40,7 @@ export class MailTemplateClientApi {
     if (!registerLineElement) {
       throw new Error(
         "Failed to parse the template HTML. (No registerline element found)",
+        { cause: { html } },
       );
     }
 
@@ -52,6 +53,7 @@ export class MailTemplateClientApi {
     if (!ulElement) {
       throw new Error(
         "Failed to parse the template HTML. (No ul element found after registerline)",
+        { cause: { html } },
       );
     }
 
@@ -62,6 +64,7 @@ export class MailTemplateClientApi {
     if (!navListElement) {
       throw new Error(
         "Failed to parse the template HTML. (No matching nav list found)",
+        { cause: { html } },
       );
     }
 
@@ -83,6 +86,7 @@ export class MailTemplateClientApi {
     if (!activeLink) {
       throw new Error(
         "Failed to parse the template HTML. (No active link found)",
+        { cause: { html } },
       );
     }
 
@@ -95,6 +99,7 @@ export class MailTemplateClientApi {
       if (!subjectElement) {
         throw new Error(
           "Failed to parse the template HTML. (No subject element found)",
+          { cause: { html } },
         );
       }
       subject = subjectElement?.attributes.getNamedItem("value")?.value || "";
@@ -107,6 +112,7 @@ export class MailTemplateClientApi {
       if (!bodyElement) {
         throw new Error(
           "Failed to parse the template HTML. (No body element found)",
+          { cause: { html } },
         );
       }
       htmlBody = bodyElement?.textContent || "";
@@ -166,7 +172,9 @@ export class MailTemplateClientApi {
     try {
       return this.extractTemplateFromHtml(html);
     } catch (error) {
-      throw new Error(`Failed to reset template to default. (${error})`);
+      throw new Error(`Failed to reset template to default. (${error})`, {
+        cause: { html, originalError: error },
+      });
     }
   }
 
@@ -311,6 +319,7 @@ export class MailTemplateBaseApi<
         : "";
       throw new Error(
         `Template mapping is out of date.${additionalMsg}${missingMsg}`,
+        { cause: { existingUrls, definedUrls } },
       );
     }
 
