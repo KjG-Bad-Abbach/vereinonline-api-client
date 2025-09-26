@@ -50,6 +50,10 @@ const mapping = {
     action: "admin_mailtemplates",
     cmd: "sepamandatpermail.txt",
   },
+  release: {
+    action: "admin_mailtemplates",
+    cmd: "rechnungsfreigabe.txt",
+  },
 } as const;
 
 /**

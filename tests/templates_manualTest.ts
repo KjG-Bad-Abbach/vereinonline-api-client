@@ -144,16 +144,41 @@ console.log("All convention templates:");
 console.log(allConventionTemplates);
 
 console.log("-----------------------------");
-console.log("Testing getAll shop templates...");
-const allShopTemplates = await client.templates.mails.shop.getAll();
-console.log("All shop templates:");
-console.log(allShopTemplates);
+try {
+  console.log("Testing getAll shop templates...");
+  const allShopTemplates = await client.templates.mails.shop.getAll();
+  console.log("All shop templates:");
+  console.log(allShopTemplates);
+} catch (e) {
+  console.error("Error fetching shop templates:", e);
+
+  // try ignoring participantTickets
+  console.log("Testing getAll shop templates without participant tickets...");
+  client.templates.mails.shop.ignoreKnownTemplate("participantTickets");
+  const allShopTemplatesWithoutParticipantTickets = await client.templates.mails
+    .shop.getAll();
+  console.log("All shop templates without participant tickets:");
+  console.log(allShopTemplatesWithoutParticipantTickets);
+}
 
 console.log("-----------------------------");
-console.log("Testing getAll accounting templates...");
-const allAccountingTemplates = await client.templates.mails.accounting.getAll();
-console.log("All accounting templates:");
-console.log(allAccountingTemplates);
+try {
+  console.log("Testing getAll accounting templates...");
+  const allAccountingTemplates = await client.templates.mails.accounting
+    .getAll();
+  console.log("All accounting templates:");
+  console.log(allAccountingTemplates);
+} catch (e) {
+  console.error("Error fetching accounting templates:", e);
+
+  // try ignoring release
+  console.log("Testing getAll accounting templates without release...");
+  client.templates.mails.accounting.ignoreKnownTemplate("release");
+  const allAccountingTemplatesWithoutRelease = await client.templates.mails
+    .accounting.getAll();
+  console.log("All accounting templates without release:");
+  console.log(allAccountingTemplatesWithoutRelease);
+}
 
 console.log("-----------------------------");
 console.log("Testing getAll reservation templates...");

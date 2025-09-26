@@ -226,6 +226,9 @@ export class MailTemplateBaseApi<
       fetchAllTemplateNames?: {
         ignoreHrefs?: string[];
       };
+      allTemplateNames?: {
+        ignore?: TEMPLATE[];
+      };
     },
   ) {}
 
@@ -243,8 +246,36 @@ export class MailTemplateBaseApi<
     return this.cache[template]!;
   }
 
+  public ignoreUpstreamUrl(url: string): void {
+    if (!this.options) {
+      this.options = {};
+    }
+    if (!this.options.fetchAllTemplateNames) {
+      this.options.fetchAllTemplateNames = {};
+    }
+    if (!this.options.fetchAllTemplateNames.ignoreHrefs) {
+      this.options.fetchAllTemplateNames.ignoreHrefs = [];
+    }
+    this.options.fetchAllTemplateNames.ignoreHrefs.push(url);
+  }
+
+  public ignoreKnownTemplate(template: TEMPLATE): void {
+    if (!this.options) {
+      this.options = {};
+    }
+    if (!this.options.allTemplateNames) {
+      this.options.allTemplateNames = {};
+    }
+    if (!this.options.allTemplateNames.ignore) {
+      this.options.allTemplateNames.ignore = [];
+    }
+    this.options.allTemplateNames.ignore.push(template);
+  }
+
   public allTemplateNames(): TEMPLATE[] {
-    return Object.keys(this.mapping) as TEMPLATE[];
+    return (Object.keys(this.mapping) as TEMPLATE[]).filter(
+      (t) => !this.options?.allTemplateNames?.ignore?.includes(t),
+    );
   }
 
   public async fetchAllTemplateNames(): Promise<
