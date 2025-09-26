@@ -229,6 +229,20 @@ export class MailTemplateBaseApi<
     },
   ) {}
 
+  private cache: Partial<Record<TEMPLATE, MailTemplateClientApi>> = {};
+  private getTemplateClient(template: TEMPLATE): MailTemplateClientApi {
+    if (!this.cache[template]) {
+      const info = this.mapping[template];
+      this.cache[template] = new MailTemplateClientApi(
+        this.client,
+        info.action,
+        info.cmd,
+        this.options,
+      );
+    }
+    return this.cache[template]!;
+  }
+
   public allTemplateNames(): TEMPLATE[] {
     return Object.keys(this.mapping) as TEMPLATE[];
   }
@@ -264,20 +278,6 @@ export class MailTemplateBaseApi<
       errors,
       "Failed to fetch template names from any template.",
     );
-  }
-
-  private cache: Partial<Record<TEMPLATE, MailTemplateClientApi>> = {};
-  private getTemplateClient(template: TEMPLATE): MailTemplateClientApi {
-    if (!this.cache[template]) {
-      const info = this.mapping[template];
-      this.cache[template] = new MailTemplateClientApi(
-        this.client,
-        info.action,
-        info.cmd,
-        this.options,
-      );
-    }
-    return this.cache[template]!;
   }
 
   public get(template: TEMPLATE): Promise<NamedMailTemplate> {
