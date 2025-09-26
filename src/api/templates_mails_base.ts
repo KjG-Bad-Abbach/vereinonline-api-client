@@ -302,24 +302,24 @@ export class MailTemplateBaseApi<
     const templates: Partial<Record<TEMPLATE, NamedMailTemplate>> = {};
 
     // Check that the mapping is up to date
-    const existingUrls = (await this.fetchAllTemplateNames()).map((t) =>
+    const upstreamUrls = (await this.fetchAllTemplateNames()).map((t) =>
       t.href
     );
-    const definedUrls = this.allTemplateNames().map((t) =>
+    const knownUrls = this.allTemplateNames().map((t) =>
       `?action=${this.mapping[t].action}&cmd=${this.mapping[t].cmd}`
     );
-    const additional = existingUrls.filter((url) => !definedUrls.includes(url));
-    const missing = definedUrls.filter((url) => !existingUrls.includes(url));
+    const additional = upstreamUrls.filter((url) => !knownUrls.includes(url));
+    const missing = knownUrls.filter((url) => !upstreamUrls.includes(url));
     if (additional.length > 0 || missing.length > 0) {
       const additionalMsg = additional.length > 0
-        ? ` Additional: ${additional.join(", ")}.`
+        ? ` Upstream has additional: ${additional.join(", ")}.`
         : "";
       const missingMsg = missing.length > 0
-        ? ` Missing: ${missing.join(", ")}.`
+        ? ` Upstream is missing: ${missing.join(", ")}.`
         : "";
       throw new Error(
         `Template mapping is out of date.${additionalMsg}${missingMsg}`,
-        { cause: { existingUrls, definedUrls } },
+        { cause: { upstreamUrls, knownUrls } },
       );
     }
 
