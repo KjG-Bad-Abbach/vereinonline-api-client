@@ -12,6 +12,7 @@
   "imports": {
     "@b-fuze/deno-dom": "jsr:@b-fuze/deno-dom@^0.1.56",
     "@std/crypto": "jsr:@std/crypto@1.0.5",
-    "@std/encoding": "jsr:@std/encoding@1.0.10"
+    "@std/encoding": "jsr:@std/encoding@^1.0.10",
+    "iconv-lite": "npm:iconv-lite@^0.7.0"
   }
 }

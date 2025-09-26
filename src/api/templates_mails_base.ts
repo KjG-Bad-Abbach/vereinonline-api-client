@@ -187,6 +187,7 @@ export class MailTemplateClientApi {
         method: "POST",
         body: body,
         contentType: "multipart/form-data",
+        charset: "iso-8859-1",
       },
     );
 
@@ -197,6 +198,7 @@ export class MailTemplateClientApi {
     ) {
       throw new Error(
         "Failed to update the template. (New values do not match)",
+        { cause: { expected: template, actual: updatedTemplate } },
       );
     }
 

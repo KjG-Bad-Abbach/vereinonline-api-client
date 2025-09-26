@@ -2,6 +2,7 @@ import { MembersApi } from "./members.ts";
 import { GroupsApi } from "./groups.ts";
 import { TemplatesApi } from "./templates.ts";
 import { generateToken } from "../utils/auth.ts";
+import iconv from "iconv-lite";
 
 /**
  * ApiClient class for interacting with the VereinOnline API.
@@ -73,6 +74,129 @@ export class ApiClient {
       return result as T;
     }
     return obj;
+  }
+
+  /**
+   * Gets a TextEncoder for the specified charset.
+   * Falls back to UTF-8 if the charset is not supported.
+   *
+   * @param charset - The character set to use for encoding (e.g., "utf-8", "iso-8859-1").
+   * @returns An object containing the encode function and the charset used.
+   */
+  getTextEncoder(
+    charset: string | null | undefined,
+  ): { encode: (input: string) => Uint8Array; charset: string } {
+    const utf8Encoder = {
+      encode: (input: string) => new TextEncoder().encode(input),
+      charset: "utf-8",
+    };
+    if (
+      charset === null ||
+      charset === undefined ||
+      charset.trim() === "" ||
+      charset.toLowerCase() === "utf-8" ||
+      charset.toLowerCase() === "utf8"
+    ) {
+      return utf8Encoder;
+    }
+
+    // Try to load iconv-lite for other charsets
+    try {
+      if (iconv.encodingExists(charset)) {
+        // Create a custom encoder using iconv-lite
+        return {
+          encode: (input: string) =>
+            new Uint8Array(iconv.encode(input, charset)),
+          charset: charset,
+        };
+      } else {
+        console.warn(
+          `Charset "${charset}" not supported by iconv-lite, falling back to utf-8`,
+        );
+        return utf8Encoder;
+      }
+    } catch {
+      // iconv-lite not available, fallback to TextEncoder
+      console.warn(
+        `iconv-lite not available and charset "${charset}" not supported, falling back to utf-8`,
+      );
+      return utf8Encoder;
+    }
+  }
+
+  /**
+   * Builds a RequestInit with multipart/form-data body,
+   * encoded using the given charset (default: utf-8).
+   *
+   * @param form - The FormData to encode.
+   * @param init - Optional RequestInit to merge with.
+   * @param charset - The character set to use for encoding (default: "utf-8").
+   * @returns An object containing the body as Uint8Array and the headers with Content-Type set.
+   */
+  async buildMultipartRequest(
+    form: FormData,
+    headers: Headers = new Headers(),
+    charset: string = "utf-8",
+  ): Promise<{ body: Uint8Array; headers: Headers }> {
+    const boundary = "----denoFormBoundary" + crypto.randomUUID();
+
+    // Encoder for given charset (falls back to utf-8 if unsupported)
+    const encoder = this.getTextEncoder(charset);
+    charset = encoder.charset;
+
+    // Build the multipart body as Uint8Array
+    const chunks: Uint8Array[] = [];
+
+    for (const [name, value] of form.entries()) {
+      let part = `--${boundary}\r\n`;
+
+      if (typeof value === "string") {
+        // Normal text field
+        part += `Content-Disposition: form-data; name="${name}"\r\n\r\n`;
+        chunks.push(encoder.encode(part + value + "\r\n"));
+      } else {
+        // File (Blob)
+        const filename = value.name || "blob";
+        const contentType = value.type ||
+          `application/octet-stream; charset=${charset}`;
+
+        part +=
+          `Content-Disposition: form-data; name="${name}"; filename="${filename}"\r\n`;
+        part += `Content-Type: ${contentType}\r\n\r\n`;
+
+        // Header first
+        chunks.push(encoder.encode(part));
+
+        // Then the file content as-is (no charset re-encode for binary)
+        chunks.push(new Uint8Array(await value.arrayBuffer()));
+
+        // Trailing CRLF
+        chunks.push(encoder.encode("\r\n"));
+      }
+    }
+
+    // Closing boundary
+    chunks.push(encoder.encode(`--${boundary}--\r\n`));
+
+    // Concatenate chunks into a single Uint8Array
+    const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
+    const body = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const c of chunks) {
+      body.set(c, offset);
+      offset += c.length;
+    }
+
+    // Clone headers (case-insensitive)
+    headers.set(
+      "Content-Type",
+      `multipart/form-data; boundary=${boundary}; charset=${charset}`,
+    );
+
+    return {
+      body,
+      headers,
+    };
   }
 
   /**
@@ -182,7 +306,7 @@ export class ApiClient {
    */
   async fetchHtml(
     path: string,
-    { method = "GET", params, body, contentType }: {
+    { method = "GET", params, body, contentType, charset = "utf-8" }: {
       method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
       params?: Record<string, string> | null;
       body?: string | Record<string, unknown> | unknown[] | FormData | null;
@@ -191,6 +315,7 @@ export class ApiClient {
         | "multipart/form-data"
         | "text/plain"
         | "application/json";
+      charset?: string;
     },
   ): Promise<string> {
     const url = new URL(path, this.baseUrl);
@@ -206,14 +331,20 @@ export class ApiClient {
       "Accept":
         "text/html, application/xhtml+xml, application/xml;q=0.9, */*;q=0.8",
     });
-    let bodyData: string | FormData | null = null;
+    let bodyData: Uint8Array | null = null;
     if (body !== null && body !== undefined) {
       if (typeof body === "string") {
-        headers.set("Content-Type", "text/plain");
-        bodyData = body;
+        const encoder = this.getTextEncoder(charset);
+        headers.set("Content-Type", "text/plain; charset=" + encoder.charset);
+        bodyData = encoder.encode(body);
       } else if (body instanceof FormData) {
-        // Let the browser set the correct Content-Type with boundary
-        bodyData = body;
+        const { body: multipartBody } = await this.buildMultipartRequest(
+          body,
+          headers,
+          charset,
+        );
+        // The correct Content-Type with boundary was set by buildMultipartRequest
+        bodyData = multipartBody;
       } else if (typeof body === "object" || Array.isArray(body)) {
         if (contentType === "application/x-www-form-urlencoded") {
           // Prepare form data as application/x-www-form-urlencoded
@@ -221,28 +352,48 @@ export class ApiClient {
           for (const [key, value] of Object.entries(body)) {
             urlSearchParams.append(key, String(value));
           }
-          headers.set("Content-Type", "application/x-www-form-urlencoded");
-          bodyData = urlSearchParams.toString();
+          const encoder = this.getTextEncoder(charset);
+          headers.set(
+            "Content-Type",
+            "application/x-www-form-urlencoded; charset=" + encoder.charset,
+          );
+          bodyData = encoder.encode(urlSearchParams.toString());
         } else if (contentType === "multipart/form-data") {
           // Prepare form data as multipart/form-data
           const formData = new FormData();
           for (const [key, value] of Object.entries(body)) {
             formData.append(key, String(value));
           }
-          bodyData = formData;
-          // Let the browser set the correct Content-Type with boundary
+          const { body: multipartBody } = await this.buildMultipartRequest(
+            formData,
+            headers,
+            charset,
+          );
+          // The correct Content-Type with boundary was set by buildMultipartRequest
+          bodyData = multipartBody;
         } else {
           // Default to application/json
           const json = JSON.stringify(body);
-          headers.set("Content-Type", "application/json");
-          bodyData = json;
+          const encoder = this.getTextEncoder(charset);
+          headers.set(
+            "Content-Type",
+            "application/json; charset=" + encoder.charset,
+          );
+          bodyData = encoder.encode(json);
         }
       }
     }
     const response = await this.fetchWithTokenInRedirect(url, {
       method,
       headers,
-      body: bodyData,
+      body: bodyData
+        ? new ReadableStream({
+          start(controller) {
+            controller.enqueue(bodyData);
+            controller.close();
+          },
+        })
+        : null,
     });
 
     // Check if the response is ok (status in the range 200-299)

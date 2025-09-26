@@ -49,6 +49,28 @@ if (!readonlyTest) {
   console.log("Template reset to default.");
 
   console.log("-----------------------------");
+  console.log("Testing set with umlauts...");
+  const umlautTemplate = {
+    subject: "Umlaut test äöüÄÖÜß",
+    htmlBody: "<p>Dies ist ein Test mit Umlauten: äöüÄÖÜß</p>",
+  };
+  await client.templates.mails.members.set(testTemplateName, umlautTemplate);
+  const templateWithUmlauts = await client.templates.mails.members.get(
+    testTemplateName,
+  );
+  if (
+    templateWithUmlauts.subject !== umlautTemplate.subject ||
+    templateWithUmlauts.htmlBody !== umlautTemplate.htmlBody
+  ) {
+    console.error("Umlaut template was not set correctly!");
+    console.log("Expected:", umlautTemplate);
+    console.log("Got:", templateWithUmlauts);
+    throw new Error("Umlaut template was not set correctly!");
+  } else {
+    console.log("Umlaut template set and fetched successfully.");
+  }
+
+  console.log("-----------------------------");
   console.log("Testing set template...");
   const templateFromFile = JSON.parse(
     await Deno.readTextFile(
@@ -61,7 +83,7 @@ if (!readonlyTest) {
     template.subject !== templateFromFile.subject ||
     template.htmlBody !== templateFromFile.htmlBody
   ) {
-    console.error("Templates do not match! Will be updated.");
+    console.log("Templates do not match! Will be updated.");
     await client.templates.mails.members.set(
       testTemplateName,
       templateFromFile,
