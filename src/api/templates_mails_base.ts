@@ -164,10 +164,7 @@ export class MailTemplateClientApi {
     );
 
     try {
-      const template = this.extractTemplateFromHtml(html);
-      if (template.subject || template.htmlBody) {
-        return template;
-      }
+      return this.extractTemplateFromHtml(html);
     } catch {
       // Ignore parsing errors here
     }
