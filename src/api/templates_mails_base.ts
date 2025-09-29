@@ -178,7 +178,10 @@ export class MailTemplateClientApi {
     }
   }
 
-  async set(template: MailTemplate): Promise<NamedMailTemplate> {
+  async set(
+    template: MailTemplate,
+    options?: { comparer?: (a: MailTemplate, b: MailTemplate) => boolean },
+  ): Promise<NamedMailTemplate> {
     const body = {
       cmd: `save${this.cmd}`,
       action: this.action,
@@ -200,10 +203,9 @@ export class MailTemplateClientApi {
     );
 
     const updatedTemplate = this.extractTemplateFromHtml(html);
-    if (
-      updatedTemplate.subject !== template.subject ||
-      updatedTemplate.htmlBody !== template.htmlBody
-    ) {
+    const comparer = options?.comparer ??
+      ((a, b) => a.subject === b.subject && a.htmlBody === b.htmlBody);
+    if (!comparer(template, updatedTemplate)) {
       throw new Error(
         "Failed to update the template. (New values do not match)",
         { cause: { expected: template, actual: updatedTemplate } },
