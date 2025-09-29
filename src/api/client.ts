@@ -306,9 +306,10 @@ export class ApiClient {
    */
   async fetchHtml(
     path: string,
-    { method = "GET", params, body, contentType, charset = "utf-8" }: {
+    { method = "GET", params, headers, body, contentType, charset = "utf-8" }: {
       method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
       params?: Record<string, string> | null;
+      headers?: Headers;
       body?: string | Record<string, unknown> | unknown[] | FormData | null;
       contentType?:
         | "application/x-www-form-urlencoded"
@@ -317,7 +318,7 @@ export class ApiClient {
         | "application/json";
       charset?: string;
     },
-  ): Promise<string> {
+  ): Promise<{ content: string; headers: Headers }> {
     const url = new URL(path, this.baseUrl);
     if (this.token) {
       url.searchParams.set("token", this.token);
@@ -327,10 +328,16 @@ export class ApiClient {
         url.searchParams.set(key, value);
       }
     }
-    const headers = new Headers({
-      "Accept":
-        "text/html, application/xhtml+xml, application/xml;q=0.9, */*;q=0.8",
-    });
+    headers ??= new Headers();
+    headers.set(
+      "Accept",
+      [
+        "text/html",
+        "application/xhtml+xml",
+        "application/xml;q=0.9",
+        "*/*;q=0.8",
+      ].join(","),
+    );
     let bodyData: Uint8Array | null = null;
     if (body !== null && body !== undefined) {
       if (typeof body === "string") {
@@ -441,7 +448,10 @@ export class ApiClient {
     }
 
     // Return the parsed data
-    return text;
+    return {
+      content: text,
+      headers: response.headers,
+    };
   }
 
   /**

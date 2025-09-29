@@ -178,7 +178,7 @@ export class MailTemplateClientApi {
   }
 
   async getNames(): Promise<{ name: string; href: string }[]> {
-    const html = await this.client.fetchHtml(
+    const response = await this.client.fetchHtml(
       "",
       {
         params: {
@@ -188,7 +188,7 @@ export class MailTemplateClientApi {
       },
     );
 
-    return this.extractNamesFromHtml(html).map((n) => ({
+    return this.extractNamesFromHtml(response.content).map((n) => ({
       index: n.index,
       name: n.name,
       href: n.href,
@@ -196,7 +196,7 @@ export class MailTemplateClientApi {
   }
 
   async get(): Promise<NamedMailTemplate> {
-    const html = await this.client.fetchHtml(
+    const response = await this.client.fetchHtml(
       "",
       {
         params: {
@@ -206,11 +206,11 @@ export class MailTemplateClientApi {
       },
     );
 
-    return this.extractTemplateFromHtml(html).template;
+    return this.extractTemplateFromHtml(response.content).template;
   }
 
   async resetToDefault(): Promise<NamedMailTemplate> {
-    const html = await this.client.fetchHtml(
+    const response = await this.client.fetchHtml(
       "",
       {
         params: {
@@ -221,10 +221,10 @@ export class MailTemplateClientApi {
     );
 
     try {
-      return this.extractTemplateFromHtml(html).template;
+      return this.extractTemplateFromHtml(response.content).template;
     } catch (error) {
       throw new Error(`Failed to reset template to default. (${error})`, {
-        cause: { html, originalError: error },
+        cause: { html: response.content, originalError: error },
       });
     }
   }
@@ -233,7 +233,7 @@ export class MailTemplateClientApi {
     template: MailTemplate,
     options?: SetOptions,
   ): Promise<NamedMailTemplate> {
-    const currentHtml = await this.client.fetchHtml(
+    const currentResponse = await this.client.fetchHtml(
       "",
       {
         params: {
@@ -243,7 +243,7 @@ export class MailTemplateClientApi {
       },
     );
 
-    const formData = this.extractTemplateFromHtml(currentHtml).form;
+    const formData = this.extractTemplateFromHtml(currentResponse.content).form;
     if (this.options?.hasSubject !== false) {
       formData.set("subject", template.subject ?? "");
     }
@@ -251,7 +251,7 @@ export class MailTemplateClientApi {
       formData.set("werte", template.htmlBody ?? "");
     }
 
-    const html = await this.client.fetchHtml(
+    const response = await this.client.fetchHtml(
       "",
       {
         method: "POST",
@@ -261,7 +261,8 @@ export class MailTemplateClientApi {
       },
     );
 
-    const updatedTemplate = this.extractTemplateFromHtml(html).template;
+    const updatedTemplate =
+      this.extractTemplateFromHtml(response.content).template;
     const comparerAsync = options?.comparer
       ? undefined // Prefer sync comparer if both are provided
       : options?.comparerAsync;
