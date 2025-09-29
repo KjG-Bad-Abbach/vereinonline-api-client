@@ -20,6 +20,17 @@ export type NamedMailTemplate = MailTemplate & {
   name: string;
 };
 
+/**
+ * Options for setting a mail template.
+ */
+export type SetOptions = {
+  comparer?: (a: MailTemplate, b: MailTemplate) => boolean;
+  comparerAsync?: (a: MailTemplate, b: MailTemplate) => Promise<boolean>;
+};
+
+/**
+ * Client for managing a specific mail template.
+ */
 export class MailTemplateClientApi {
   constructor(
     private client: ApiClient,
@@ -180,10 +191,7 @@ export class MailTemplateClientApi {
 
   async set(
     template: MailTemplate,
-    options?: {
-      comparer?: (a: MailTemplate, b: MailTemplate) => boolean;
-      comparerAsync?: (a: MailTemplate, b: MailTemplate) => Promise<boolean>;
-    },
+    options?: SetOptions,
   ): Promise<NamedMailTemplate> {
     const body = {
       cmd: `save${this.cmd}`,
@@ -335,9 +343,10 @@ export class MailTemplateBaseApi<
   public set(
     template: TEMPLATE,
     data: MailTemplate,
+    options?: SetOptions,
   ): Promise<NamedMailTemplate> {
     const api = this.getTemplateClient(template);
-    return api.set(data);
+    return api.set(data, options);
   }
 
   public async getAll(): Promise<Record<TEMPLATE, NamedMailTemplate>> {
