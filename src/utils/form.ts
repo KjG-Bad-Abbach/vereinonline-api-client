@@ -85,3 +85,17 @@ export function buildFormData(
 
   return formData;
 }
+
+export function formDataToList(
+  formData: FormData,
+): Array<{ name: string; value: string }> {
+  const list: Array<{ name: string; value: string }> = [];
+  for (const [key, value] of formData.entries()) {
+    if (typeof value === "string") {
+      list.push({ name: key, value });
+    } else {
+      throw new Error("File inputs are not supported.");
+    }
+  }
+  return list;
+}

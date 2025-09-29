@@ -1,6 +1,6 @@
 import type { ApiClient } from "./client.ts";
 import { DOMParser, initParser } from "@b-fuze/deno-dom/wasm-noinit";
-import { buildFormData } from "../utils/form.ts";
+import { buildFormData, formDataToList } from "../utils/form.ts";
 
 // Initialize the parser
 await initParser();
@@ -20,6 +20,15 @@ export type NamedMailTemplate = MailTemplate & {
   index?: number;
   name: string;
 };
+
+/**
+ * A mail template with its name and all other fields as optional strings.
+ */
+export type FullMailTemplate =
+  & NamedMailTemplate
+  & {
+    additionalFields?: Array<{ name: string; value: string }>;
+  };
 
 /**
  * Options for setting a mail template.
@@ -92,7 +101,7 @@ export class MailTemplateClientApi {
 
   private extractTemplateFromHtml(
     html: string,
-  ): { template: NamedMailTemplate; form: FormData } {
+  ): { template: FullMailTemplate; form: FormData } {
     const doc = new DOMParser().parseFromString(html, "text/html");
 
     // Extract the name from the active link
@@ -140,12 +149,29 @@ export class MailTemplateClientApi {
       htmlBody = bodyValue.toString();
     }
 
+    // Extract any additional fields
+    const ignoreFields = [
+      "subject",
+      "werte",
+      "cmd",
+      "action",
+      "dialog",
+      "sprache",
+      "view",
+      "fakeusernameremembered",
+      "fakepasswordremembered",
+    ];
+    const additionalFields = formDataToList(formData).filter((f) =>
+      !ignoreFields.includes(f.name)
+    );
+
     return {
       template: {
         index: activeLink.index,
         name: activeLink.name,
         subject: subject,
         htmlBody: htmlBody,
+        additionalFields: additionalFields,
       },
       form: formData,
     };
