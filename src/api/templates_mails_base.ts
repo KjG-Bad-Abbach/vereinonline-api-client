@@ -1,5 +1,6 @@
 import type { ApiClient } from "./client.ts";
 import { DOMParser, initParser } from "@b-fuze/deno-dom/wasm-noinit";
+import { buildFormData } from "../utils/form.ts";
 
 // Initialize the parser
 await initParser();
@@ -89,7 +90,9 @@ export class MailTemplateClientApi {
     return links;
   }
 
-  private extractTemplateFromHtml(html: string): NamedMailTemplate {
+  private extractTemplateFromHtml(
+    html: string,
+  ): { template: NamedMailTemplate; form: FormData } {
     const doc = new DOMParser().parseFromString(html, "text/html");
 
     // Extract the name from the active link
@@ -101,39 +104,50 @@ export class MailTemplateClientApi {
       );
     }
 
+    // Create FormData from the form element
+    const formElement = doc?.querySelector("form#form1");
+    if (!formElement) {
+      throw new Error(
+        "Failed to parse the template HTML. (No form element found)",
+        { cause: { html } },
+      );
+    }
+    const formData = buildFormData(formElement);
+
+    // Extract subject from the form data if applicable
     let subject: string | undefined = undefined;
     if (this.options?.hasSubject !== false) {
-      // Extract the subject from the input field
-      const subjectElement = doc?.querySelector(
-        '#form1 input[name="subject"]',
-      );
-      if (!subjectElement) {
+      const subjectValue = formData.get("subject");
+      if (subjectValue === null) {
         throw new Error(
-          "Failed to parse the template HTML. (No subject element found)",
+          "Failed to parse the template HTML. (No subject value found in formData)",
           { cause: { html } },
         );
       }
-      subject = subjectElement?.attributes.getNamedItem("value")?.value || "";
+      subject = subjectValue.toString();
     }
 
+    // Extract body from the form data if applicable
     let htmlBody: string | undefined = undefined;
     if (this.options?.hasHtmlBody !== false) {
-      // Extract the body from the textarea
-      const bodyElement = doc?.querySelector('#form1 textarea[name="werte"]');
-      if (!bodyElement) {
+      const bodyValue = formData.get("werte");
+      if (bodyValue === null) {
         throw new Error(
-          "Failed to parse the template HTML. (No body element found)",
+          "Failed to parse the template HTML. (No body value found in formData)",
           { cause: { html } },
         );
       }
-      htmlBody = bodyElement?.textContent || "";
+      htmlBody = bodyValue.toString();
     }
 
     return {
-      index: activeLink.index,
-      name: activeLink.name,
-      subject: subject,
-      htmlBody: htmlBody,
+      template: {
+        index: activeLink.index,
+        name: activeLink.name,
+        subject: subject,
+        htmlBody: htmlBody,
+      },
+      form: formData,
     };
   }
 
@@ -166,7 +180,7 @@ export class MailTemplateClientApi {
       },
     );
 
-    return this.extractTemplateFromHtml(html);
+    return this.extractTemplateFromHtml(html).template;
   }
 
   async resetToDefault(): Promise<NamedMailTemplate> {
@@ -181,7 +195,7 @@ export class MailTemplateClientApi {
     );
 
     try {
-      return this.extractTemplateFromHtml(html);
+      return this.extractTemplateFromHtml(html).template;
     } catch (error) {
       throw new Error(`Failed to reset template to default. (${error})`, {
         cause: { html, originalError: error },
@@ -193,27 +207,35 @@ export class MailTemplateClientApi {
     template: MailTemplate,
     options?: SetOptions,
   ): Promise<NamedMailTemplate> {
-    const body = {
-      cmd: `save${this.cmd}`,
-      action: this.action,
-      dialog: "0",
-      sprache: "",
-      view: "",
-      subject: template.subject,
-      werte: template.htmlBody,
-    };
+    const currentHtml = await this.client.fetchHtml(
+      "",
+      {
+        params: {
+          action: this.action,
+          cmd: this.cmd,
+        },
+      },
+    );
+
+    const formData = this.extractTemplateFromHtml(currentHtml).form;
+    if (this.options?.hasSubject !== false) {
+      formData.set("subject", template.subject ?? "");
+    }
+    if (this.options?.hasHtmlBody !== false) {
+      formData.set("werte", template.htmlBody ?? "");
+    }
 
     const html = await this.client.fetchHtml(
       "",
       {
         method: "POST",
-        body: body,
+        body: formData,
         contentType: "multipart/form-data",
         charset: "iso-8859-1",
       },
     );
 
-    const updatedTemplate = this.extractTemplateFromHtml(html);
+    const updatedTemplate = this.extractTemplateFromHtml(html).template;
     const comparerAsync = options?.comparer
       ? undefined // Prefer sync comparer if both are provided
       : options?.comparerAsync;
