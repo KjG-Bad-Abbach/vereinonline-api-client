@@ -1,7 +1,7 @@
 services:
   mitm:
     container_name: mitm
-    image: mitmproxy/mitmproxy:12.1.1
+    image: mitmproxy/mitmproxy:12.1.2
     command: >
       mitmweb
       --mode reverse:${MITMWEB_PROXY_TARGET}
