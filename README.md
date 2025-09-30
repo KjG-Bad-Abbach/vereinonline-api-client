@@ -43,8 +43,14 @@ the VereinOnline API. It includes the following modules:
 To use this module in your Deno project, import it directly from the module's
 URL:
 
+```bash
+deno add jsr:@kjg-bad-abbach/vereinonline-api-client
+```
+
+Then, import it in your TypeScript file:
+
 ```ts
-import { ApiClient } from "jsr:@kjg-bad-abbach/vereinonline-api-client";
+import { ApiClient } from "@kjg-bad-abbach/vereinonline-api-client";
 
 const client = new ApiClient("https://www.vereinonline.org/IHRVEREIN/");
 
