@@ -23,6 +23,14 @@ the VereinOnline API. It includes the following modules:
 
 - Fetch a list of groups from the API.
 
+### `TemplatesApi`
+
+- Fetch all available template names for a given template type (e.g., member mail templates).
+- Retrieve the content of a specific template by name.
+- Update/set the content of a template (subject and HTML body), including support for special characters (umlauts, etc.).
+- Reset a template to its default value.
+- Fetch all templates for a given category (e.g., all member, event, vote, convention, shop, accounting, reservation, forum, task, file, blog, doubleOptIn, layout templates).
+
 ### Key Features
 
 - Strongly typed interfaces for `Member` and `Group` objects.
