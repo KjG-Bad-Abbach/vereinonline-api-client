@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Setup repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Check tag matches version in deno.json
         run: |
