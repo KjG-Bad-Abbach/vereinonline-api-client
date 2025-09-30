@@ -2,8 +2,10 @@ import { MembersApi } from "./members.ts";
 import { GroupsApi } from "./groups.ts";
 import { TemplatesApi } from "./templates.ts";
 import { generateToken } from "../utils/auth.ts";
-import iconv from "iconv-lite";
-import { Buffer } from "node:buffer";
+import type { Buffer } from "node:buffer";
+import { fixJsonStringDoubleEncoding } from "../utils/fixJsonStringDoubleEncoding.ts";
+import { getTextEncoder } from "../utils/textEncoder.ts";
+import { buildMultipartRequest } from "../utils/multipartRequestBuilder.ts";
 
 /**
  * ApiClient class for interacting with the VereinOnline API.
@@ -19,178 +21,6 @@ export class ApiClient {
    */
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
-  }
-
-  /**
-   * Fixes double-encoded JSON strings, particularly those with UTF-8 characters
-   * that have been incorrectly encoded as sequences like "\u00c3\u00bc" instead of "\u00fc".
-   *
-   * This method recursively traverses the input object, detecting string values that may be
-   * double-encoded, and decodes them using the specified charset (default: "UTF-8").
-   * It handles strings, arrays, and objects, returning a new object with corrected encodings.
-   *
-   * @template T The type of the input and output object.
-   * @param obj - The object or string to fix.
-   * @param decoder - Optional TextDecoder instance to use for decoding.
-   * @param charset - The character set to use for decoding (default: "UTF-8"; not used when decoder is provided).
-   * @returns The object or string with corrected encoding.
-   */
-  fixJsonStringDoubleEncoding<T>(
-    obj: T,
-    decoder?: TextDecoder,
-    charset: string = "UTF-8",
-  ): T {
-    if (!decoder) {
-      decoder = new TextDecoder(charset);
-    }
-
-    // VereinOnline sometimes returns JSON strings that are double-encoded,
-    // meaning that characters like "ü" and "ß" are encoded as
-    // "f\u00c3\u00bcr" and "gro\u00c3\u009f" instead of "f\u00fcr" and "gro\u00df".
-    // Wrongly encoded example:
-    // {"text":"f\u00c3\u00bcr --- gro\u00c3\u009f"}
-    // Correctly encoded example:
-    // {"text":"f\u00fcr --- gro\u00df"}
-    // Decoded example:
-    // {"text":"für --- groß"}
-
-    if (typeof obj === "string") {
-      // Re-encode as bytes, then decode using the correct charset
-      const bytes = Buffer.from(
-        [...obj].map((char) => char.charCodeAt(0)),
-      );
-      return decoder.decode(bytes) as T;
-    } else if (Array.isArray(obj)) {
-      return obj.map((item) =>
-        this.fixJsonStringDoubleEncoding(item, decoder)
-      ) as T;
-    } else if (obj && typeof obj === "object") {
-      const result: Record<string, unknown> = {};
-      for (const [key, value] of Object.entries(obj)) {
-        result[key] = this.fixJsonStringDoubleEncoding(
-          value,
-          decoder,
-        );
-      }
-      return result as T;
-    }
-    return obj;
-  }
-
-  /**
-   * Gets a TextEncoder for the specified charset.
-   * Falls back to UTF-8 if the charset is not supported.
-   *
-   * @param charset - The character set to use for encoding (e.g., "utf-8", "iso-8859-1").
-   * @returns An object containing the encode function and the charset used.
-   */
-  getTextEncoder(
-    charset: string | null | undefined,
-  ): { encode: (input: string) => Buffer<ArrayBuffer>; charset: string } {
-    const utf8Encoder = {
-      encode: (input: string) => Buffer.from(new TextEncoder().encode(input)),
-      charset: "utf-8",
-    };
-    if (
-      charset === null ||
-      charset === undefined ||
-      charset.trim() === "" ||
-      charset.toLowerCase() === "utf-8" ||
-      charset.toLowerCase() === "utf8"
-    ) {
-      return utf8Encoder;
-    }
-
-    // Try to load iconv-lite for other charsets
-    try {
-      if (iconv.encodingExists(charset)) {
-        // Create a custom encoder using iconv-lite
-        return {
-          encode: (input: string) => Buffer.from(iconv.encode(input, charset)),
-          charset: charset,
-        };
-      } else {
-        console.warn(
-          `Charset "${charset}" not supported by iconv-lite, falling back to utf-8`,
-        );
-        return utf8Encoder;
-      }
-    } catch {
-      // iconv-lite not available, fallback to TextEncoder
-      console.warn(
-        `iconv-lite not available and charset "${charset}" not supported, falling back to utf-8`,
-      );
-      return utf8Encoder;
-    }
-  }
-
-  /**
-   * Builds a RequestInit with multipart/form-data body,
-   * encoded using the given charset (default: utf-8).
-   *
-   * @param form - The FormData to encode.
-   * @param init - Optional RequestInit to merge with.
-   * @param charset - The character set to use for encoding (default: "utf-8").
-   * @returns An object containing the body as Buffer and the headers with Content-Type set.
-   */
-  async buildMultipartRequest(
-    form: FormData,
-    headers: Headers = new Headers(),
-    charset: string = "utf-8",
-  ): Promise<{ body: Buffer<ArrayBuffer>; headers: Headers }> {
-    const boundary = "----denoFormBoundary" + crypto.randomUUID();
-
-    // Encoder for given charset (falls back to utf-8 if unsupported)
-    const encoder = this.getTextEncoder(charset);
-    charset = encoder.charset;
-
-    // Build the multipart body as Buffer
-    const chunks: Buffer[] = [];
-
-    for (const [name, value] of form.entries()) {
-      let part = `--${boundary}\r\n`;
-
-      if (typeof value === "string") {
-        // Normal text field
-        part += `Content-Disposition: form-data; name="${name}"\r\n\r\n`;
-        chunks.push(encoder.encode(part + value + "\r\n"));
-      } else {
-        // File (Blob)
-        const filename = value.name || "blob";
-        const contentType = value.type ||
-          `application/octet-stream; charset=${charset}`;
-
-        part +=
-          `Content-Disposition: form-data; name="${name}"; filename="${filename}"\r\n`;
-        part += `Content-Type: ${contentType}\r\n\r\n`;
-
-        // Header first
-        chunks.push(encoder.encode(part));
-
-        // Then the file content as-is (no charset re-encode for binary)
-        chunks.push(Buffer.from(await value.arrayBuffer()));
-
-        // Trailing CRLF
-        chunks.push(encoder.encode("\r\n"));
-      }
-    }
-
-    // Closing boundary
-    chunks.push(encoder.encode(`--${boundary}--\r\n`));
-
-    // Concatenate chunks into a single Buffer
-    const body = Buffer.concat(chunks);
-
-    // Set the Content-Type header with boundary and charset
-    headers.set(
-      "Content-Type",
-      `multipart/form-data; boundary=${boundary}; charset=${charset}`,
-    );
-
-    return {
-      body,
-      headers,
-    };
   }
 
   /**
@@ -255,7 +85,7 @@ export class ApiClient {
       data !== null &&
       "error" in data;
     if (isErrorObject) {
-      const errorMsg = this.fixJsonStringDoubleEncoding(
+      const errorMsg = fixJsonStringDoubleEncoding(
         (data as { error: string }).error,
         new TextDecoder("UTF-8"),
       ) ||
@@ -336,11 +166,11 @@ export class ApiClient {
     let bodyData: Buffer<ArrayBuffer> | null = null;
     if (body !== null && body !== undefined) {
       if (typeof body === "string") {
-        const encoder = this.getTextEncoder(charset);
+        const encoder = getTextEncoder(charset);
         headers.set("Content-Type", "text/plain; charset=" + encoder.charset);
         bodyData = encoder.encode(body);
       } else if (body instanceof FormData) {
-        const { body: multipartBody } = await this.buildMultipartRequest(
+        const { body: multipartBody } = await buildMultipartRequest(
           body,
           headers,
           charset,
@@ -354,7 +184,7 @@ export class ApiClient {
           for (const [key, value] of Object.entries(body)) {
             urlSearchParams.append(key, String(value));
           }
-          const encoder = this.getTextEncoder(charset);
+          const encoder = getTextEncoder(charset);
           headers.set(
             "Content-Type",
             "application/x-www-form-urlencoded; charset=" + encoder.charset,
@@ -366,7 +196,7 @@ export class ApiClient {
           for (const [key, value] of Object.entries(body)) {
             formData.append(key, String(value));
           }
-          const { body: multipartBody } = await this.buildMultipartRequest(
+          const { body: multipartBody } = await buildMultipartRequest(
             formData,
             headers,
             charset,
@@ -376,7 +206,7 @@ export class ApiClient {
         } else {
           // Default to application/json
           const json = JSON.stringify(body);
-          const encoder = this.getTextEncoder(charset);
+          const encoder = getTextEncoder(charset);
           headers.set(
             "Content-Type",
             "application/json; charset=" + encoder.charset,
@@ -419,7 +249,7 @@ export class ApiClient {
       text !== null &&
       "error" in text;
     if (isErrorObject) {
-      const errorMsg = this.fixJsonStringDoubleEncoding(
+      const errorMsg = fixJsonStringDoubleEncoding(
         (text as { error: string }).error,
         new TextDecoder("UTF-8"),
       ) ||
