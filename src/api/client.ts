@@ -277,6 +277,7 @@ export class ApiClient {
     url: URL,
     options: RequestInit,
   ): Promise<Response> {
+    options = { ...options };
     options.redirect = "manual";
     const response = await fetch(url, options);
     if (response.status === 302) {
