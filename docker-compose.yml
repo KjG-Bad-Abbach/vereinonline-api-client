@@ -1,0 +1,25 @@
+services:
+  mitm:
+    container_name: mitm
+    image: mitmproxy/mitmproxy:12.1.1
+    command: >
+      mitmweb
+      --mode reverse:${MITMWEB_PROXY_TARGET}
+      --listen-host 0.0.0.0 --listen-port 8080
+      --web-host 0.0.0.0 --web-port 8081
+      --set block_global=false
+      --set web_password=${MITMWEB_PASSWORD}
+    # --ssl-insecure
+    environment:
+      MITMWEB_PASSWORD: ${MITMWEB_PASSWORD}
+    ports:
+      - 8080:8080 # proxy
+      - 8081:8081 # mitmweb UI
+    volumes:
+      - ./mitm:/home/mitmproxy/.mitmproxy # flows/certs/logs
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z 127.0.0.1 8080 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
