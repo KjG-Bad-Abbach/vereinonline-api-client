@@ -25,11 +25,15 @@ the VereinOnline API. It includes the following modules:
 
 ### `TemplatesApi`
 
-- Fetch all available template names for a given template type (e.g., member mail templates).
+- Fetch all available template names for a given template type (e.g., member
+  mail templates).
 - Retrieve the content of a specific template by name.
-- Update/set the content of a template (subject and HTML body), including support for special characters (umlauts, etc.).
+- Update/set the content of a template (subject and HTML body), including
+  support for special characters (umlauts, etc.).
 - Reset a template to its default value.
-- Fetch all templates for a given category (e.g., all member, event, vote, convention, shop, accounting, reservation, forum, task, file, blog, doubleOptIn, layout templates).
+- Fetch all templates for a given category (e.g., all member, event, vote,
+  convention, shop, accounting, reservation, forum, task, file, blog,
+  doubleOptIn, layout templates).
 
 ### Key Features
 
@@ -124,7 +128,8 @@ main().catch(console.error);
 
 ## Debugging using a MITM Proxy
 
-To debug the API requests and responses, you can use a MITM proxy like [mitmproxy](https://mitmproxy.org/). Here's how to set it up:
+To debug the API requests and responses, you can use a MITM proxy like
+[mitmproxy](https://mitmproxy.org/). Here's how to set it up:
 
 1. Create a `.env` file in the root of this project with the following content:
 
@@ -145,8 +150,12 @@ To debug the API requests and responses, you can use a MITM proxy like [mitmprox
    const client = new ApiClient("http://localhost:8080/IHRVEREIN/"); // HTTP, not HTTPS because in Deno and Node.js trusting the mitmproxy CA is complicated and cookies are not required
    ```
 
-   or open the browser at: `https://localhost:8080/IHRVEREIN/` (HTTPS required that the cookies work; you will have to trust the mitmproxy CA certificate in your browser)
+   or open the browser at: `https://localhost:8080/IHRVEREIN/` (HTTPS required
+   that the cookies work; you will have to trust the mitmproxy CA certificate in
+   your browser)
 
-4. Access the mitmproxy web interface at `http://localhost:8081` and log in using the password you set in the `.env` file.
+4. Access the mitmproxy web interface at `http://localhost:8081` and log in
+   using the password you set in the `.env` file.
 
-5. You can now inspect the API requests and responses in the mitmproxy web interface.
+5. You can now inspect the API requests and responses in the mitmproxy web
+   interface.
