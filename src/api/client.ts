@@ -3,6 +3,7 @@ import { GroupsApi } from "./groups.ts";
 import { TemplatesApi } from "./templates.ts";
 import { generateToken } from "../utils/auth.ts";
 import iconv from "iconv-lite";
+import { Buffer } from "node:buffer";
 
 /**
  * ApiClient class for interacting with the VereinOnline API.
@@ -55,7 +56,7 @@ export class ApiClient {
 
     if (typeof obj === "string") {
       // Re-encode as bytes, then decode using the correct charset
-      const bytes = Uint8Array.from(
+      const bytes = Buffer.from(
         [...obj].map((char) => char.charCodeAt(0)),
       );
       return decoder.decode(bytes) as T;
@@ -85,9 +86,9 @@ export class ApiClient {
    */
   getTextEncoder(
     charset: string | null | undefined,
-  ): { encode: (input: string) => Uint8Array; charset: string } {
+  ): { encode: (input: string) => Buffer<ArrayBuffer>; charset: string } {
     const utf8Encoder = {
-      encode: (input: string) => new TextEncoder().encode(input),
+      encode: (input: string) => Buffer.from(new TextEncoder().encode(input)),
       charset: "utf-8",
     };
     if (
@@ -105,8 +106,7 @@ export class ApiClient {
       if (iconv.encodingExists(charset)) {
         // Create a custom encoder using iconv-lite
         return {
-          encode: (input: string) =>
-            new Uint8Array(iconv.encode(input, charset)),
+          encode: (input: string) => Buffer.from(iconv.encode(input, charset)),
           charset: charset,
         };
       } else {
@@ -131,21 +131,21 @@ export class ApiClient {
    * @param form - The FormData to encode.
    * @param init - Optional RequestInit to merge with.
    * @param charset - The character set to use for encoding (default: "utf-8").
-   * @returns An object containing the body as Uint8Array and the headers with Content-Type set.
+   * @returns An object containing the body as Buffer and the headers with Content-Type set.
    */
   async buildMultipartRequest(
     form: FormData,
     headers: Headers = new Headers(),
     charset: string = "utf-8",
-  ): Promise<{ body: Uint8Array; headers: Headers }> {
+  ): Promise<{ body: Buffer<ArrayBuffer>; headers: Headers }> {
     const boundary = "----denoFormBoundary" + crypto.randomUUID();
 
     // Encoder for given charset (falls back to utf-8 if unsupported)
     const encoder = this.getTextEncoder(charset);
     charset = encoder.charset;
 
-    // Build the multipart body as Uint8Array
-    const chunks: Uint8Array[] = [];
+    // Build the multipart body as Buffer
+    const chunks: Buffer[] = [];
 
     for (const [name, value] of form.entries()) {
       let part = `--${boundary}\r\n`;
@@ -168,7 +168,7 @@ export class ApiClient {
         chunks.push(encoder.encode(part));
 
         // Then the file content as-is (no charset re-encode for binary)
-        chunks.push(new Uint8Array(await value.arrayBuffer()));
+        chunks.push(Buffer.from(await value.arrayBuffer()));
 
         // Trailing CRLF
         chunks.push(encoder.encode("\r\n"));
@@ -178,16 +178,10 @@ export class ApiClient {
     // Closing boundary
     chunks.push(encoder.encode(`--${boundary}--\r\n`));
 
-    // Concatenate chunks into a single Uint8Array
-    const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
-    const body = new Uint8Array(totalLength);
-    let offset = 0;
-    for (const c of chunks) {
-      body.set(c, offset);
-      offset += c.length;
-    }
+    // Concatenate chunks into a single Buffer
+    const body = Buffer.concat(chunks);
 
-    // Clone headers (case-insensitive)
+    // Set the Content-Type header with boundary and charset
     headers.set(
       "Content-Type",
       `multipart/form-data; boundary=${boundary}; charset=${charset}`,
@@ -339,7 +333,7 @@ export class ApiClient {
         "*/*;q=0.8",
       ].join(","),
     );
-    let bodyData: Uint8Array | null = null;
+    let bodyData: Buffer<ArrayBuffer> | null = null;
     if (body !== null && body !== undefined) {
       if (typeof body === "string") {
         const encoder = this.getTextEncoder(charset);
@@ -394,14 +388,7 @@ export class ApiClient {
     const response = await this.fetchWithTokenInRedirect(url, {
       method,
       headers,
-      body: bodyData
-        ? new ReadableStream({
-          start(controller) {
-            controller.enqueue(bodyData);
-            controller.close();
-          },
-        })
-        : null,
+      body: bodyData,
     });
 
     // Check if the response is ok (status in the range 200-299)
