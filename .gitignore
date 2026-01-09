@@ -140,3 +140,6 @@ dist
 mitm/
 .DS_Store
 Thumbs.db
+
+# direnv
+.direnv/
