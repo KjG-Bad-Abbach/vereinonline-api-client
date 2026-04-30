@@ -3,7 +3,7 @@
   "specifiers": {
     "jsr:@b-fuze/deno-dom@~0.1.56": "0.1.56",
     "jsr:@denosaurs/plug@1.1.0": "1.1.0",
-    "jsr:@std/crypto@1.0.5": "1.0.5",
+    "jsr:@std/crypto@1.1.0": "1.1.0",
     "jsr:@std/encoding@1": "1.0.10",
     "jsr:@std/encoding@^1.0.10": "1.0.10",
     "jsr:@std/fmt@1": "1.0.8",
@@ -31,8 +31,8 @@
         "jsr:@std/path@1"
       ]
     },
-    "@std/crypto@1.0.5": {
-      "integrity": "0dcfbb319fe0bba1bd3af904ceb4f948cde1b92979ec1614528380ed308a3b40"
+    "@std/crypto@1.1.0": {
+      "integrity": "b8d6d0a6377a32b213af2661ed7bf1062d94feac0c57def5526a8e74a95c3ec8"
     },
     "@std/encoding@1.0.10": {
       "integrity": "8783c6384a2d13abd5e9e87a7ae0520a30e9f56aeeaa3bdf910a3eaaf5c811a1"
@@ -80,7 +80,7 @@
   "workspace": {
     "dependencies": [
       "jsr:@b-fuze/deno-dom@~0.1.56",
-      "jsr:@std/crypto@1.0.5",
+      "jsr:@std/crypto@1.1.0",
       "jsr:@std/encoding@^1.0.10",
       "npm:iconv-lite@0.7"
     ]
