@@ -5,7 +5,7 @@
     "jsr:@denosaurs/plug@1.1.0": "1.1.0",
     "jsr:@std/crypto@1.1.0": "1.1.0",
     "jsr:@std/encoding@1": "1.0.11",
-    "jsr:@std/encoding@^1.0.10": "1.0.11",
+    "jsr:@std/encoding@^1.0.11": "1.0.11",
     "jsr:@std/fmt@1": "1.0.10",
     "jsr:@std/fs@1": "1.0.24",
     "jsr:@std/internal@^1.0.14": "1.0.14",
@@ -70,7 +70,7 @@
     "dependencies": [
       "jsr:@b-fuze/deno-dom@~0.1.56",
       "jsr:@std/crypto@1.1.0",
-      "jsr:@std/encoding@^1.0.10",
+      "jsr:@std/encoding@^1.0.11",
       "npm:iconv-lite@~0.7.2"
     ]
   }
